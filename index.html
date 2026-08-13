@@ -227,7 +227,122 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 }
 
 /* ─────────────────────────────────────────────
-   5. 날짜 팝업 안의 일정 목록
+   5. 오늘의 카드 — 달력 바로 아래 한 줄씩
+   ───────────────────────────────────────────── */
+.daily {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin: var(--s4) var(--s4) 0;
+}
+.daily[hidden] { display: none; }
+
+.daily-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s3);
+  background: var(--surface);
+  border: 2px solid transparent;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.daily-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in oklab, var(--c) 40%, transparent);
+}
+.daily-card:active { transform: translateY(0); }
+
+.daily-face {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c) 22%, transparent);
+}
+.daily-face svg { width: 28px; height: 28px; }
+
+.daily-body { flex: 1; min-width: 0; }
+.daily-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: var(--c);
+}
+.daily-text {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.daily-go { flex: none; width: 16px; height: 16px; color: var(--muted); }
+
+/* 카드를 누르면 열리는 팝업 안쪽 */
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  max-height: 60svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tagline {
+  align-self: flex-start;
+  padding: 3px var(--s3);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c) 22%, transparent);
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--ink-2);
+}
+
+.detail h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.42;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.detail p { margin: 0; font-size: 15px; line-height: 1.75; color: var(--ink-2); }
+
+.word-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.word { font-size: 30px; font-weight: 800; letter-spacing: -.025em; }
+.ipa  { font-size: 14px; font-weight: 500; color: var(--muted); }
+.pos  {
+  padding: 2px var(--s2);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c) 24%, transparent);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.word-ko { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--s3) * -1); }
+
+.ex-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  padding: var(--s4);
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+}
+.ex-en { font-size: 15px; font-weight: 600; line-height: 1.5; }
+.ex-ko { font-size: 13.5px; color: var(--ink-2); }
+
+.tip { display: flex; gap: var(--s3); font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
+.tip b { flex: none; color: var(--c); font-weight: 800; letter-spacing: .04em; }
+
+/* ─────────────────────────────────────────────
+   6. 날짜 팝업 안의 일정 목록
    ───────────────────────────────────────────── */
 .day-title { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; }
 .day-title h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
@@ -328,7 +443,7 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .add-btn svg { width: 17px; height: 17px; }
 
 /* ─────────────────────────────────────────────
-   6. 입력 시트
+   7. 입력 시트
    ───────────────────────────────────────────── */
 dialog.sheet {
   width: min(460px, 100%);
@@ -449,7 +564,23 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
     <div class="grid" id="grid"></div>
   </section>
 
+  <!-- 일정 확인하러 온 김에 눈에 들어오도록 달력 바로 아래 둔다 -->
+  <section class="daily" id="daily"></section>
+
 </div>
+
+<!-- 오늘의 상식 / 오늘의 단어 팝업 -->
+<dialog class="sheet" id="dailySheet">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="dailyTitle">오늘의 상식</h2>
+      <button type="button" class="icon-btn" id="dailyClose" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="detail" id="dailyBody"></div>
+  </div>
+</dialog>
 
 <!-- 날짜를 누르면 뜨는 팝업 -->
 <dialog class="sheet" id="daySheet">
@@ -517,6 +648,11 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
     </div>
   </form>
 </dialog>
+
+<!-- 콘텐츠는 앱 코드와 분리해 둔다. 상식·단어를 추가할 때 이 파일만 열면 된다.
+     JSON이 아니라 .js 로 둔 이유: 파일을 그냥 더블클릭해서 열어도 동작하게 하려고. -->
+<script src="data/knowledge.js"></script>
+<script src="data/words.js"></script>
 
 <script>
 /* ─────────────────────────────────────────────
@@ -806,6 +942,91 @@ $("form").onsubmit = ev => {
   $("sheet").close();
   render();
 };
+
+/* ─────────────────────────────────────────────
+   오늘의 상식 / 오늘의 단어
+
+   날짜로 순서를 정한다. 무작위로 뽑으면 새로고침할 때마다
+   내용이 바뀌어서 '오늘의'라는 말이 무의미해지기 때문이다.
+   ───────────────────────────────────────────── */
+const DAILY = {
+  knowledge: { label: "오늘의 상식", color: "#A98BD4", shape: "special" },
+  word:      { label: "오늘의 단어", color: "#4FB3AC", shape: "work"    },
+};
+
+/* 올해 며칠째인가 (1월 1일이 0) */
+function dayOfYear(d = new Date()) {
+  return Math.floor((d - new Date(d.getFullYear(), 0, 1)) / 86400000);
+}
+
+const pickToday = list => list[dayOfYear() % list.length];
+
+const CHEVRON = `<svg class="daily-go" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
+
+function dailyCard(kind, text) {
+  const d = DAILY[kind];
+  return `
+    <button class="daily-card" data-daily="${kind}" style="--c:${d.color}">
+      <span class="daily-face">${ART[d.shape](d.color)}</span>
+      <span class="daily-body">
+        <span class="daily-label">${d.label}</span>
+        <span class="daily-text">${esc(text)}</span>
+      </span>
+      ${CHEVRON}
+    </button>`;
+}
+
+function renderDaily() {
+  const k = pickToday(KNOWLEDGE);
+  const w = pickToday(WORDS);
+  $("daily").innerHTML =
+    dailyCard("knowledge", k.q) +
+    dailyCard("word", `${w.word} · ${w.ko}`);
+}
+
+function openDaily(kind) {
+  const d = DAILY[kind];
+  $("dailyTitle").textContent = d.label;
+  $("dailyBody").style.setProperty("--c", d.color);
+
+  if (kind === "knowledge") {
+    const k = pickToday(KNOWLEDGE);
+    $("dailyBody").innerHTML = `
+      <span class="tagline">${esc(k.tag)}</span>
+      <h3>${esc(k.q)}</h3>
+      <p>${esc(k.a)}</p>`;
+  } else {
+    const w = pickToday(WORDS);
+    $("dailyBody").innerHTML = `
+      <div class="word-head">
+        <span class="word">${esc(w.word)}</span>
+        <span class="ipa">${esc(w.ipa)}</span>
+        <span class="pos">${esc(w.pos)}</span>
+      </div>
+      <div class="word-ko">${esc(w.ko)}</div>
+      <div class="ex-box">
+        <div class="ex-en">${esc(w.ex)}</div>
+        <div class="ex-ko">${esc(w.exKo)}</div>
+      </div>
+      ${w.tip ? `<div class="tip"><b>TIP</b><span>${esc(w.tip)}</span></div>` : ""}`;
+  }
+  $("dailySheet").showModal();
+}
+
+$("daily").onclick = ev => {
+  const card = ev.target.closest("[data-daily]");
+  if (card) openDaily(card.dataset.daily);
+};
+$("dailyClose").onclick = () => $("dailySheet").close();
+
+/* 콘텐츠 파일을 못 읽었으면 카드를 아예 감춘다 */
+if (typeof KNOWLEDGE !== "undefined" && typeof WORDS !== "undefined"
+    && KNOWLEDGE.length && WORDS.length) {
+  renderDaily();
+} else {
+  $("daily").hidden = true;
+}
 
 render();
 
