@@ -19,6 +19,8 @@
 
 ## 폰에 설치하기
 
+> 안드로이드 앱(APK)으로 설치하는 방법과 업데이트 절차는 **[ANDROID.md](ANDROID.md)** 를 보세요.
+
 **폰 카메라로 아래 QR을 비추면** 주소를 입력하지 않고 바로 열립니다.
 
 <img src="assets/qr.png" width="180" alt="캘비 주소 QR">

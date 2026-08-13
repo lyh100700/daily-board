@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.lyh100700.twa",
+      "sha256_cert_fingerprints": [
+        "7A:9B:04:A8:BB:68:D2:95:CC:4B:91:7C:CD:F4:3C:C6:19:BA:58:F9:6A:78:5D:66:C1:BE:32:08:BA:34:92:B0"
+      ]
+    }
+  }
+]
