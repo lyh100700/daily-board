@@ -842,7 +842,8 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 <div class="app">
 
   <header class="head">
-    <img class="brand" id="brand" src="icons/brand-144.png" alt="" width="38" height="38">
+    <div class="title">
+      <img class="brand" id="brand" src="icons/brand-144.png" alt="" width="38" height="38">
       <div class="title-text">
         <span class="year" id="year">2026년</span>
         <h1 class="month" id="monthLabel">8월</h1>
@@ -1502,6 +1503,7 @@ render();
     const wait = Math.max(0, MIN_MS - (performance.now() - start));
     setTimeout(() => {
       el.classList.add("gone");
+      window.scrollTo(0, 0);        // 첫 화면이 걷히면 달력 맨 위부터 보이게
       setTimeout(() => { el.hidden = true; }, 500);
     }, wait);
   };
