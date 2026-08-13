@@ -29,10 +29,21 @@
 index.html            앱 전체 (화면·기능·디자인이 이 안에 다 있음)
 data/knowledge.js     오늘의 상식 콘텐츠
 data/words.js         오늘의 단어 콘텐츠
+fonts/                Nunito 글꼴
 manifest.webmanifest  홈화면 설치 설정
 sw.js                 오프라인 지원
 icons/                앱 아이콘
 ```
+
+## 글꼴
+
+숫자와 알파벳은 [Nunito](https://github.com/googlefonts/nunito)를 씁니다.
+끝이 둥근 글꼴이라 캐릭터의 둥근 형태와 결이 맞습니다.
+
+한글은 기기의 시스템 글꼴을 씁니다. 한글 웹폰트는 글자 수가 많아 수 MB에 달해
+앱에 심으면 첫 로딩이 크게 느려지기 때문입니다.
+
+Nunito는 SIL Open Font License 1.1로 배포됩니다. 전문은 `fonts/Nunito-OFL.txt`에 있습니다.
 
 ## 오늘의 상식 / 오늘의 단어
 
