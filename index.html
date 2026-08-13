@@ -146,6 +146,24 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 }
 .brand svg { width: 28px; height: 28px; }
 
+/* 캐릭터 눈 깜빡임 — 가만히 있으면 그림이지만, 깜빡이면 살아 있는 느낌이 난다.
+   여럿이 동시에 깜빡이면 기계 같아 보여서 자리마다 주기를 다르게 뒀다. */
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.08); } }
+
+.eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 5.4s infinite;
+}
+.daily-face   .eye { animation-duration: 6.4s; animation-delay: .9s; }
+.install-face .eye { animation-duration: 4.6s; animation-delay: 1.7s; }
+.cat          .eye { animation-duration: 7.2s; animation-delay: .4s; }
+.empty        .eye { animation-duration: 4.2s; }
+
+/* 빈 날의 캐릭터는 천천히 위아래로 */
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.empty svg { animation: bob 3.4s ease-in-out infinite; }
+
 .year  { font-size: 14px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
 .month { font-size: 27px; font-weight: 800; letter-spacing: -.02em; margin: 0; font-variant-numeric: tabular-nums; }
 
@@ -236,8 +254,11 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   font-variant-numeric: tabular-nums;
   transition: background .15s ease, color .15s ease, box-shadow .15s ease;
 }
-.cell[data-dow="0"] .num { color: var(--sun); }
-.cell[data-dow="6"] .num { color: var(--sat); }
+/* :not(.picked) 로 감싼 이유 — 고른 날은 노란 원에 짙은 글씨여야 하는데,
+   요일 색 규칙이 더 구체적이라 그걸 덮어써 버렸다. */
+.cell:not(.picked)[data-dow="0"] .num { color: var(--sun); }
+.cell:not(.picked)[data-dow="6"] .num { color: var(--sat); }
+.cell:not(.picked).holiday   .num { color: var(--sun); }
 
 /* 오늘은 테두리, 고른 날은 채움.
    전에는 둘 다 노란 원이라 오늘을 고르면 무엇이 무엇인지 알 수 없었다. */
@@ -263,6 +284,13 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mini.done { opacity: .42; text-decoration: line-through; }
+
+/* 공휴일은 일정과 구분되게 빨간 계열로 */
+.mini.holiday {
+  background: color-mix(in oklab, var(--sun) 22%, transparent);
+  color: var(--sun);
+  font-weight: 800;
+}
 
 .more {
   padding-left: 4px;
@@ -399,9 +427,20 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 /* ─────────────────────────────────────────────
    6. 날짜 팝업 안의 일정 목록
    ───────────────────────────────────────────── */
-.day-title { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; }
+.day-title { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; flex-wrap: wrap; }
 .day-title h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.day-title h2.holiday { color: var(--sun); }
 .day-title .count { font-size: 13px; color: var(--muted); font-weight: 600; flex: none; }
+
+.holiday-tag {
+  flex: none;
+  padding: 2px var(--s2);
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--sun) 20%, transparent);
+  color: var(--sun);
+  font-size: 11.5px;
+  font-weight: 800;
+}
 
 .events {
   display: flex;
@@ -474,6 +513,51 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .check:hover { border-color: var(--c); }
 .check svg { width: 14px; height: 14px; }
 .ev.done .check { background: var(--c); border-color: var(--c); color: #fff; }
+
+/* 삭제 — 눌러도 곧바로 사라지지만 되돌릴 수 있다 */
+.trash {
+  flex: none;
+  width: 26px; height: 26px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  color: var(--muted);
+  transition: background .15s ease, color .15s ease;
+}
+.trash:hover { background: color-mix(in oklab, var(--danger) 16%, transparent); color: var(--danger); }
+.trash svg { width: 15px; height: 15px; }
+
+/* 되돌리기 알림 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s6) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--s4);
+  max-width: calc(100% - var(--s8));
+  padding: var(--s3) var(--s3) var(--s3) var(--s5);
+  border-radius: var(--r-full);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+  animation: popUp .24s cubic-bezier(.2,.85,.3,1);
+}
+.toast[hidden] { display: none; }
+
+.toast-undo {
+  flex: none;
+  height: 32px;
+  padding: 0 var(--s4);
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13.5px;
+  font-weight: 800;
+}
 
 /* 빈 날 */
 .empty { padding: var(--s8) 0 var(--s6); text-align: center; }
@@ -694,6 +778,12 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 
 </div>
 
+<!-- 삭제 후 되돌리기 -->
+<div class="toast" id="toast" hidden>
+  <span id="toastText">일정을 삭제했어요</span>
+  <button class="toast-undo" id="toastUndo">되돌리기</button>
+</div>
+
 <!-- 설치 안내 막대 (설치 가능할 때만 나타난다) -->
 <div class="install" id="installBar" hidden>
   <span class="install-face" id="installFace"></span>
@@ -726,6 +816,7 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
     <div class="sheet-head">
       <div class="day-title">
         <h2 id="dayLabel">8월 13일 목요일</h2>
+        <span class="holiday-tag" id="dayHoliday" hidden></span>
         <span class="count" id="dayCount"></span>
       </div>
       <button type="button" class="icon-btn" id="dayClose" aria-label="닫기">
@@ -791,14 +882,15 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
      JSON이 아니라 .js 로 둔 이유: 파일을 그냥 더블클릭해서 열어도 동작하게 하려고. -->
 <script src="data/knowledge.js"></script>
 <script src="data/words.js"></script>
+<script src="data/holidays.js"></script>
 
 <script>
 /* ─────────────────────────────────────────────
    캐릭터 4종 — 그림 파일 없이 SVG로 직접 그린다
    ───────────────────────────────────────────── */
-const FACE = (eyes, extra = "") => `
-  <circle cx="15.5" cy="22" r="1.9" fill="#3B322A"/>
-  <circle cx="24.5" cy="22" r="1.9" fill="#3B322A"/>
+const FACE = (extra = "") => `
+  <circle class="eye" cx="15.5" cy="22" r="1.9" fill="#3B322A"/>
+  <circle class="eye" cx="24.5" cy="22" r="1.9" fill="#3B322A"/>
   <path d="M17.4 26.4q2.6 2.2 5.2 0" stroke="#3B322A" stroke-width="1.7" fill="none" stroke-linecap="round"/>
   <ellipse cx="11" cy="25.2" rx="2.3" ry="1.5" fill="#E0736A" opacity=".3"/>
   <ellipse cx="29" cy="25.2" rx="2.3" ry="1.5" fill="#E0736A" opacity=".3"/>
@@ -882,6 +974,21 @@ const eventsOn = date => events
   .filter(e => e.date === date)
   .sort((a,b) => (a.time || "").localeCompare(b.time || ""));
 
+/* 공휴일 조회 — 없으면 null.
+   양력 고정 공휴일은 모든 연도에서, 음력·대체공휴일은 표에 있는 해에만 잡힌다. */
+function holidayOn(date) {
+  if (typeof HOLIDAYS_FIXED === "undefined") return null;
+
+  const year = date.slice(0, 4);
+  const md   = date.slice(5);
+
+  const fixed = HOLIDAYS_FIXED.find(([d]) => d === md);
+  if (fixed) return fixed[1];
+
+  const listed = (HOLIDAYS_BY_YEAR?.[year] || []).find(([d]) => d === md);
+  return listed ? listed[1] : null;
+}
+
 function renderMonth() {
   $("year").textContent       = `${view.y}년`;
   $("monthLabel").textContent = `${view.m}월`;
@@ -898,15 +1005,21 @@ function renderMonth() {
     const out  = d.getMonth() !== view.m - 1;           // 지난달·다음달
     const list = eventsOn(date);
 
-    /* 칸이 좁으니 두 개까지만 보여주고 나머지는 개수로 알린다 */
-    const minis = list.slice(0, 2)
-      .map(e => `<span class="mini${e.done ? " done" : ""}" style="--c:${catOf(e.cat).color}">${esc(e.title)}</span>`)
-      .join("")
-      + (list.length > 2 ? `<span class="more">+${list.length - 2}</span>` : "");
+    /* 칸이 좁다. 공휴일이 있으면 그것부터 보여주고 남는 자리에 일정을 넣는다 */
+    const holiday = holidayOn(date);
+    const room    = holiday ? 1 : 2;
+    const rest    = list.length - room;
 
-    html += `<button class="cell${out ? " out" : ""}${date === TODAY ? " today" : ""}${date === picked ? " picked" : ""}"
+    const minis =
+      (holiday ? `<span class="mini holiday">${esc(holiday)}</span>` : "") +
+      list.slice(0, room)
+        .map(e => `<span class="mini${e.done ? " done" : ""}" style="--c:${catOf(e.cat).color}">${esc(e.title)}</span>`)
+        .join("") +
+      (rest > 0 ? `<span class="more">+${rest}</span>` : "");
+
+    html += `<button class="cell${out ? " out" : ""}${date === TODAY ? " today" : ""}${date === picked ? " picked" : ""}${holiday ? " holiday" : ""}"
                      data-date="${date}" data-dow="${i % 7}"
-                     aria-label="${d.getMonth() + 1}월 ${d.getDate()}일, 일정 ${list.length}개">
+                     aria-label="${d.getMonth() + 1}월 ${d.getDate()}일${holiday ? " " + holiday : ""}, 일정 ${list.length}개">
                <span class="num">${d.getDate()}</span>
                <span class="minis">${minis}</span>
              </button>`;
@@ -920,7 +1033,12 @@ function renderDaySheet() {
   const w = new Date(y, m - 1, d).getDay();
   const list = eventsOn(picked);
 
+  const holiday = holidayOn(picked);
+
   $("dayLabel").textContent = `${m}월 ${d}일 ${WD[w]}요일`;
+  $("dayLabel").className   = holiday || w === 0 ? "holiday" : "";
+  $("dayHoliday").textContent = holiday || "";
+  $("dayHoliday").hidden      = !holiday;
   $("dayCount").textContent = list.length ? `${list.length}개` : "";
 
   if (!list.length) {
@@ -944,6 +1062,11 @@ function renderDaySheet() {
         <button class="check" data-toggle="${e.id}" aria-label="완료 표시"
                 aria-pressed="${e.done}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </button>
+        <button class="trash" data-del="${e.id}" aria-label="삭제">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18M8 6V4h8v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/>
+          </svg>
         </button>
       </div>`;
   }).join("");
@@ -1033,15 +1156,51 @@ $("grid").onclick = ev => {
 
 $("dayClose").onclick = () => $("daySheet").close();
 
+/* ─────────────────────────────────────────────
+   삭제 — 확인 창으로 막지 않고, 지운 뒤 되돌릴 수 있게 한다.
+   묻고 답하는 것보다 실수했을 때 한 번에 되돌리는 쪽이 덜 번거롭다.
+   ───────────────────────────────────────────── */
+let undoItem = null, undoTimer = null;
+
+function removeEvent(id) {
+  const i = events.findIndex(v => v.id === id);
+  if (i < 0) return;
+
+  undoItem = { event: events[i], at: i };
+  events.splice(i, 1);
+  save();
+  render();
+
+  $("toastText").textContent = `'${undoItem.event.title}' 삭제됨`;
+  $("toast").hidden = false;
+
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { $("toast").hidden = true; undoItem = null; }, 6000);
+}
+
+$("toastUndo").onclick = () => {
+  if (!undoItem) return;
+  events.splice(undoItem.at, 0, undoItem.event);   // 있던 자리에 그대로 되돌린다
+  save();
+  undoItem = null;
+  clearTimeout(undoTimer);
+  $("toast").hidden = true;
+  render();
+};
+
 $("events").onclick = ev => {
-  const edit = ev.target.closest("[data-edit]");
-  if (edit) return openSheet(edit.dataset.edit);
+  const del = ev.target.closest("[data-del]");
+  if (del) return removeEvent(del.dataset.del);
 
   const toggle = ev.target.closest("[data-toggle]");
   if (toggle) {
     const e = events.find(v => v.id === toggle.dataset.toggle);
     if (e) { e.done = !e.done; save(); render(); }
+    return;
   }
+
+  const edit = ev.target.closest("[data-edit]");
+  if (edit) openSheet(edit.dataset.edit);
 };
 
 $("addBtn").onclick   = () => openSheet();
