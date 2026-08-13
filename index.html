@@ -878,26 +878,6 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 .btn-primary { flex: 1; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-sm); }
 .btn-ghost { padding: 0 var(--s5); background: var(--surface-2); border: 2px solid var(--line); color: var(--danger); }
 .btn-ghost[hidden] { display: none; }
-
-/* 폰 캘린더로 넘기는 버튼.
-   웹앱은 스스로 정해진 시각에 알림을 띄울 수 없어서
-   (그 기능은 브라우저에서 개발이 중단됐다)
-   알람은 폰 캘린더에 맡긴다. */
-.btn-cal {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s2);
-  height: 48px;
-  background: var(--surface-2);
-  border: 2px dashed var(--line);
-  color: var(--ink-2);
-  font-size: 14.5px;
-  font-weight: 700;
-}
-.btn-cal:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
-.btn-cal svg { width: 17px; height: 17px; }
 </style>
 </head>
 <body>
@@ -1047,13 +1027,6 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       <label class="label" for="fNote">메모 <span style="font-weight:400">(선택)</span></label>
       <textarea class="input" id="fNote" rows="2" placeholder="장소, 준비물 등" maxlength="200"></textarea>
     </div>
-
-    <button type="button" class="btn btn-cal" id="calBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>
-      </svg>
-      알람 받기
-    </button>
 
     <div class="actions">
       <button type="button" class="btn btn-ghost" id="delBtn" hidden>삭제</button>
@@ -1441,62 +1414,6 @@ $("cats").onclick = ev => {
 
 $("fAllday").onchange = ev => {
   $("timePick").classList.toggle("off", ev.target.checked);
-};
-
-/* ─────────────────────────────────────────────
-   폰 캘린더로 넘기기
-
-   웹앱은 꺼져 있는 동안 스스로 알림을 띄울 수 없다.
-   그 용도의 브라우저 기능(Notification Triggers)은 개발이 중단됐고,
-   대신 하려면 일정을 서버에 올려야 해서 지금의 장점을 잃는다.
-   그래서 알람은 이미 그 일을 잘하는 폰 캘린더에 맡긴다.
-   ───────────────────────────────────────────── */
-function calendarUrl({ title, date, time, note }) {
-  const pad = n => String(n).padStart(2, "0");
-  const [y, m, d] = date.split("-").map(Number);
-  let dates;
-
-  if (!time) {
-    /* 하루 종일 일정은 날짜만. 끝나는 날은 다음 날로 적는 것이 규칙이다 */
-    const nx = new Date(y, m - 1, d + 1);
-    dates = `${y}${pad(m)}${pad(d)}/${nx.getFullYear()}${pad(nx.getMonth() + 1)}${pad(nx.getDate())}`;
-  } else {
-    const [hh, mm] = time.split(":").map(Number);
-    const s = new Date(y, m - 1, d, hh, mm);
-    const e = new Date(s.getTime() + 60 * 60 * 1000);      // 기본 1시간
-    const f = x => `${x.getFullYear()}${pad(x.getMonth() + 1)}${pad(x.getDate())}`
-                 + `T${pad(x.getHours())}${pad(x.getMinutes())}00`;
-    dates = `${f(s)}/${f(e)}`;
-  }
-
-  const q = new URLSearchParams({
-    action: "TEMPLATE",
-    text: title,
-    dates,
-    details: note ? `${note}\n\n(캘비에서 보냄)` : "캘비에서 보냄",
-  });
-  return `https://calendar.google.com/calendar/render?${q}`;
-}
-
-$("calBtn").onclick = () => {
-  const title = $("fTitle").value.trim();
-  const date  = $("fDate").value;
-
-  if (!title || !date) {
-    $("toastText").textContent = "제목과 날짜를 먼저 채워 주세요";
-    $("toast").hidden = false;
-    $("toastUndo").hidden = true;
-    clearTimeout(undoTimer);
-    undoTimer = setTimeout(() => { $("toast").hidden = true; $("toastUndo").hidden = false; }, 3000);
-    return;
-  }
-
-  window.open(calendarUrl({
-    title,
-    date,
-    time: $("fAllday").checked ? "" : getTimeValue(),
-    note: $("fNote").value.trim(),
-  }), "_blank", "noopener");
 };
 
 $("delBtn").onclick = () => {
