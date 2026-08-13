@@ -495,20 +495,6 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .shuffle:active { transform: translateY(0); }
 .shuffle svg { width: 17px; height: 17px; }
 
-.back-today {
-  flex: none;
-  height: 48px;
-  padding: 0 var(--s5);
-  border-radius: var(--r-md);
-  background: var(--surface-2);
-  border: 1.5px solid var(--line);
-  color: var(--ink-2);
-  font-size: 14.5px;
-  font-weight: 700;
-  transition: border-color .15s ease;
-}
-.back-today:hover { border-color: var(--accent); }
-.back-today[hidden] { display: none; }
 
 /* ─────────────────────────────────────────────
    6. 날짜 팝업 안의 일정 목록
@@ -790,6 +776,69 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 .row { display: flex; gap: var(--s3); }
 .row > * { flex: 1; min-width: 0; }
 
+/* ─────────────────────────────────────────────
+   시각 고르기
+
+   기기 기본 입력창은 눌러도 반응이 보이지 않아
+   내가 오전을 골랐는지 오후를 골랐는지 알 수 없었다.
+   직접 만들어 누른 쪽이 확실히 드러나게 했다.
+   ───────────────────────────────────────────── */
+.timepick {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  flex-wrap: wrap;
+}
+
+.ampm {
+  display: flex;
+  flex: none;
+  padding: 3px;
+  gap: 3px;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+}
+
+.ampm button {
+  min-width: 62px;
+  height: 42px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background .16s ease, color .16s ease,
+              font-size .16s ease, transform .12s ease;
+}
+/* 고른 쪽은 색이 차고 글자가 커지고 두꺼워진다 */
+.ampm button[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+.ampm button:active { transform: scale(.94); }
+
+.sel {
+  height: 48px;
+  padding: 0 var(--s3);
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: border-color .15s ease;
+}
+.sel:focus { outline: none; border-color: var(--accent); }
+
+.unit { font-size: 14px; font-weight: 600; color: var(--ink-2); margin-right: var(--s1); }
+
+/* 하루 종일을 켜면 시각 고르기를 흐리게 */
+.timepick.off { opacity: .4; pointer-events: none; }
+
 /* 카테고리 고르기 — 캐릭터로 고른다 */
 .cats { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); }
 
@@ -906,7 +955,6 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
         </svg>
         다른 것 보기
       </button>
-      <button type="button" class="back-today" id="dailyToday" hidden>오늘</button>
     </div>
   </div>
 </dialog>
@@ -951,14 +999,22 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       <div class="cats" id="cats"></div>
     </div>
 
-    <div class="row">
-      <div class="field">
-        <label class="label" for="fDate">날짜</label>
-        <input class="input" id="fDate" type="date" required>
-      </div>
-      <div class="field">
-        <label class="label" for="fTime">시각</label>
-        <input class="input" id="fTime" type="time">
+    <div class="field">
+      <label class="label" for="fDate">날짜</label>
+      <input class="input" id="fDate" type="date" required>
+    </div>
+
+    <div class="field">
+      <span class="label">시각</span>
+      <div class="timepick" id="timePick">
+        <div class="ampm" role="group" aria-label="오전 오후">
+          <button type="button" data-mer="AM" aria-pressed="true">오전</button>
+          <button type="button" data-mer="PM" aria-pressed="false">오후</button>
+        </div>
+        <select class="sel" id="fHour" aria-label="시"></select>
+        <span class="unit">시</span>
+        <select class="sel" id="fMin" aria-label="분"></select>
+        <span class="unit">분</span>
       </div>
     </div>
 
@@ -983,6 +1039,7 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
      JSON이 아니라 .js 로 둔 이유: 파일을 그냥 더블클릭해서 열어도 동작하게 하려고. -->
 <script src="data/knowledge.js"></script>
 <script src="data/words.js"></script>
+<script src="data/economy.js"></script>
 <script src="data/holidays.js"></script>
 
 <script>
@@ -1193,6 +1250,47 @@ function openDay(date) {
 }
 
 /* ─────────────────────────────────────────────
+   시각 고르기 — 오전·오후, 시, 분
+   ───────────────────────────────────────────── */
+$("fHour").innerHTML = Array.from({ length: 12 },
+  (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("");
+$("fMin").innerHTML = Array.from({ length: 12 },
+  (_, i) => { const m = String(i * 5).padStart(2, "0"); return `<option value="${m}">${m}</option>`; }).join("");
+
+let meridiem = "AM";
+
+function paintMeridiem() {
+  $("timePick").querySelectorAll(".ampm button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.mer === meridiem)));
+}
+
+/* "14:30" → 오후 2시 30분 */
+function setTimeValue(hhmm) {
+  if (!hhmm) { meridiem = "AM"; $("fHour").value = "9"; $("fMin").value = "00"; paintMeridiem(); return; }
+  let [h, m] = hhmm.split(":").map(Number);
+  meridiem = h < 12 ? "AM" : "PM";
+  let h12 = h % 12; if (h12 === 0) h12 = 12;
+  $("fHour").value = String(h12);
+  $("fMin").value  = String(Math.round(m / 5) * 5 % 60).padStart(2, "0");
+  paintMeridiem();
+}
+
+/* 오후 2시 30분 → "14:30" */
+function getTimeValue() {
+  let h = Number($("fHour").value);
+  if (meridiem === "AM" && h === 12) h = 0;
+  if (meridiem === "PM" && h !== 12) h += 12;
+  return `${String(h).padStart(2, "0")}:${$("fMin").value}`;
+}
+
+$("timePick").onclick = ev => {
+  const b = ev.target.closest("button[data-mer]");
+  if (!b) return;
+  meridiem = b.dataset.mer;
+  paintMeridiem();
+};
+
+/* ─────────────────────────────────────────────
    입력 시트
    ───────────────────────────────────────────── */
 let pickedCat = "life";
@@ -1212,10 +1310,10 @@ function openSheet(id) {
   $("sheetTitle").textContent = e ? "일정 수정" : "일정 추가";
   $("fTitle").value    = e?.title ?? "";
   $("fDate").value     = e?.date  ?? picked;
-  $("fTime").value     = e?.time  ?? "";
+  setTimeValue(e?.time ?? "");
   $("fNote").value     = e?.note  ?? "";
   $("fAllday").checked = e ? !e.time : false;
-  $("fTime").disabled  = $("fAllday").checked;
+  $("timePick").classList.toggle("off", $("fAllday").checked);
   $("delBtn").hidden   = !e;
   pickedCat = e?.cat ?? "life";
 
@@ -1315,8 +1413,7 @@ $("cats").onclick = ev => {
 };
 
 $("fAllday").onchange = ev => {
-  $("fTime").disabled = ev.target.checked;
-  if (ev.target.checked) $("fTime").value = "";
+  $("timePick").classList.toggle("off", ev.target.checked);
 };
 
 $("delBtn").onclick = () => {
@@ -1332,7 +1429,7 @@ $("form").onsubmit = ev => {
   const data = {
     title: $("fTitle").value.trim(),
     date:  $("fDate").value,
-    time:  $("fAllday").checked ? "" : $("fTime").value,
+    time:  $("fAllday").checked ? "" : getTimeValue(),
     note:  $("fNote").value.trim(),
     cat:   pickedCat,
   };
@@ -1358,16 +1455,26 @@ $("form").onsubmit = ev => {
    내용이 바뀌어서 '오늘의'라는 말이 무의미해지기 때문이다.
    ───────────────────────────────────────────── */
 const DAILY = {
-  knowledge: { label: "오늘의 상식", color: "#A98BD4", shape: "special" },
-  word:      { label: "오늘의 단어", color: "#4FB3AC", shape: "work"    },
+  knowledge: { label: "일반상식", color: "#A98BD4", shape: "special" },
+  economy:   { label: "경제상식", color: "#D4A02C", shape: "life"    },
+  word:      { label: "영단어",   color: "#4FB3AC", shape: "work"    },
 };
 
-/* 올해 며칠째인가 (1월 1일이 0) */
-function dayOfYear(d = new Date()) {
-  return Math.floor((d - new Date(d.getFullYear(), 0, 1)) / 86400000);
-}
+const listOf = kind =>
+  kind === "knowledge" ? KNOWLEDGE :
+  kind === "economy"   ? ECONOMY   : WORDS;
 
-const pickToday = list => list[dayOfYear() % list.length];
+/* 앱을 열 때마다 새로 뽑는다.
+   날짜로 고정하면 하루 종일 같은 것만 보이는데,
+   나갔다 들어올 때마다 바뀌는 편이 더 읽게 된다. */
+let shown = {};
+
+function drawAll() {
+  Object.keys(DAILY).forEach(k => {
+    const n = listOf(k).length;
+    shown[k] = n ? Math.floor(Math.random() * n) : 0;
+  });
+}
 
 const CHEVRON = `<svg class="daily-go" viewBox="0 0 24 24" fill="none" stroke="currentColor"
   stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>`;
@@ -1386,26 +1493,22 @@ function dailyCard(kind, text) {
 }
 
 function renderDaily() {
-  const k = pickToday(KNOWLEDGE);
-  const w = pickToday(WORDS);
-  /* 카드는 한 줄뿐이라 뜻은 첫 번째 것만 보여준다 */
+  const k = listOf("knowledge")[shown.knowledge];
+  const e = listOf("economy")[shown.economy];
+  const w = listOf("word")[shown.word];
+
+  /* 카드는 한 줄뿐이라 단어 뜻은 첫 번째 것만 보여준다 */
   $("daily").innerHTML =
     dailyCard("knowledge", k.q) +
+    dailyCard("economy",   e.q) +
     dailyCard("word", `${w.word}${w.kr ? ` [${w.kr}]` : ""} · ${w.ko.split(",")[0]}`);
 }
 
-/* 지금 보고 있는 것.
-   idx 가 null 이면 '오늘의 것', 숫자면 넘겨서 본 것이다. */
-let daily = { kind: "knowledge", idx: null };
-
-const listOf = kind => (kind === "knowledge" ? KNOWLEDGE : WORDS);
-
-function currentIndex() {
-  return daily.idx ?? dayOfYear() % listOf(daily.kind).length;
-}
+/* 지금 팝업에서 보고 있는 종류 */
+let daily = { kind: "knowledge" };
 
 function bodyHTML(kind, item) {
-  if (kind === "knowledge") {
+  if (kind !== "word") {
     return `
       <span class="tagline">${esc(item.tag)}</span>
       <h3>${esc(item.q)}</h3>
@@ -1431,15 +1534,11 @@ function bodyHTML(kind, item) {
 }
 
 function paintDailySheet({ animate } = {}) {
-  const d    = DAILY[daily.kind];
-  const list = listOf(daily.kind);
-  const i    = currentIndex();
-  const isToday = daily.idx === null;
+  const d = DAILY[daily.kind];
 
   $("dailySheet").style.setProperty("--c", d.color);
-  $("dailyTitle").textContent = isToday ? d.label : d.label.replace("오늘의 ", "");
-  $("dailyToday").hidden = isToday;
-  $("dailyBody").innerHTML = bodyHTML(daily.kind, list[i]);
+  $("dailyTitle").textContent = d.label;
+  $("dailyBody").innerHTML = bodyHTML(daily.kind, listOf(daily.kind)[shown[daily.kind]]);
 
   if (animate) {                       // 애니메이션을 처음부터 다시 재생시킨다
     $("dailyBody").classList.remove("swap");
@@ -1449,7 +1548,7 @@ function paintDailySheet({ animate } = {}) {
 }
 
 function openDaily(kind) {
-  daily = { kind, idx: null };         // 열 때는 늘 오늘의 것부터
+  daily = { kind };
   paintDailySheet();
   $("dailySheet").showModal();
 }
@@ -1459,18 +1558,15 @@ $("dailyShuffle").onclick = () => {
   const n = listOf(daily.kind).length;
   if (n < 2) return;
 
-  const now = currentIndex();
+  const now = shown[daily.kind];
   let next = now;
   while (next === now) next = Math.floor(Math.random() * n);
 
-  daily.idx = next;
+  shown[daily.kind] = next;
   paintDailySheet({ animate: true });
+  renderDaily();                       // 뒤에 있는 카드도 같이 맞춰 준다
 };
 
-$("dailyToday").onclick = () => {
-  daily.idx = null;
-  paintDailySheet({ animate: true });
-};
 
 $("daily").onclick = ev => {
   const card = ev.target.closest("[data-daily]");
@@ -1479,8 +1575,13 @@ $("daily").onclick = ev => {
 $("dailyClose").onclick = () => $("dailySheet").close();
 
 /* 콘텐츠 파일을 못 읽었으면 카드를 아예 감춘다 */
-if (typeof KNOWLEDGE !== "undefined" && typeof WORDS !== "undefined"
-    && KNOWLEDGE.length && WORDS.length) {
+const dataReady =
+  typeof KNOWLEDGE !== "undefined" && KNOWLEDGE.length &&
+  typeof ECONOMY   !== "undefined" && ECONOMY.length &&
+  typeof WORDS     !== "undefined" && WORDS.length;
+
+if (dataReady) {
+  drawAll();
   renderDaily();
 } else {
   $("daily").hidden = true;
