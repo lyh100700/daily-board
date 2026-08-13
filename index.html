@@ -1555,7 +1555,9 @@ function showInstall(mode) {
   if (mode === "ios") {
     $("installDesc").innerHTML = `${SHARE_ICON} 공유 버튼 → '홈 화면에 추가'`;
   } else if (mode === "manual") {
-    $("installDesc").textContent = "브라우저 메뉴에서 '앱 설치'";
+    /* 브라우저마다 메뉴 이름이 달라서(크롬 '앱 설치', 삼성 '현재 페이지 추가')
+       여기서는 단정하지 않고 안내 페이지로 넘긴다 */
+    $("installDesc").textContent = "내 폰에 맞는 방법을 알려드려요";
   }
 
   $("installBar").hidden = false;

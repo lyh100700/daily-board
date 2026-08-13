@@ -188,6 +188,16 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
 }
 .install-btn[hidden] { display: none; }
 
+/* 앱 내부 브라우저에서 빠져나가는 버튼 */
+a.chrome-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: var(--purple);
+  color: #fff;
+}
+
 .why {
   margin: var(--s4) 0 0;
   padding-top: var(--s4);
@@ -300,6 +310,7 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
   <!-- 폰에서 볼 때: 기기에 맞는 단계 -->
   <section class="card" id="stepCard" hidden>
     <h2 id="stepTitle">홈 화면에 추가하기</h2>
+    <a class="install-btn chrome-btn" id="chromeBtn" hidden>크롬으로 다시 열기</a>
     <button class="install-btn" id="installBtn" hidden>지금 설치하기</button>
     <ol class="steps" id="steps"></ol>
     <p class="why" id="why" hidden></p>
@@ -345,10 +356,21 @@ const ua = navigator.userAgent;
 const isIOS = /iphone|ipad|ipod/i.test(ua) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const isAndroid = /android/i.test(ua);
+const isSamsung = /SamsungBrowser/i.test(ua);   // 메뉴 구성이 크롬과 다르다
 const isPhone = isIOS || isAndroid;
 
-/* 카카오톡·네이버 등 앱 안에서 열린 브라우저는 설치 자체가 막혀 있다 */
-const isInApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|DaumApps/i.test(ua);
+/* 카카오톡·네이버 등 앱 안에서 열린 브라우저는 설치 자체가 막혀 있다.
+   ' wv' 는 안드로이드가 앱 내부 브라우저를 쓸 때 붙이는 표시라
+   앱 이름을 일일이 나열하지 않아도 대부분 걸러진다. */
+const isInApp =
+  /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|FB_IAB|Line\/|DaumApps|everytimeapp|BAND|kakaostory|Snapchat|Twitter/i.test(ua) ||
+  (/Android/i.test(ua) && /;\s*wv\b|\bwv\)/i.test(ua));
+
+/* 안드로이드에서는 지금 보는 주소를 크롬으로 다시 열도록 넘길 수 있다.
+   앱 내부 브라우저에 갇혔을 때 빠져나오는 유일한 길이다. */
+const CHROME_INTENT =
+  "intent://" + location.host + location.pathname +
+  "#Intent;scheme=https;package=com.android.chrome;end;";
 
 const SHARE = `<svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -359,10 +381,12 @@ const SHARE = `<svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="cu
 let canPrompt = false;
 
 const STEPS = {
-  inapp: () => ["카카오톡·네이버 같은 앱 안에서 열려 있어 설치가 막혀 있습니다",
-                "오른쪽 위 <b>⋯</b> 또는 <b>⋮</b> 메뉴를 누르세요",
-                "<b>다른 브라우저로 열기</b> 또는 <b>Safari로 열기</b> 선택",
-                "그 화면에서 이 주소를 다시 열면 설치 단계가 나옵니다"],
+  inapp: () => [
+    "지금 화면은 <b>카카오톡·네이버 같은 앱 안의 브라우저</b>입니다 <span class='sub'>여기서는 설치도 바로가기도 만들 수 없습니다</span>",
+    isAndroid ? "위 <b>크롬으로 다시 열기</b> 버튼을 누르세요"
+              : "오른쪽 위 <b>⋯</b> 메뉴 → <b>Safari로 열기</b>",
+    "버튼이 안 통하면 메뉴에서 <b>다른 브라우저로 열기</b>를 고르세요",
+    "크롬(또는 사파리)에서 이 주소를 열면 설치 단계가 나옵니다"],
 
   ios: () => [`화면 아래 가운데 <b>공유 버튼</b> ${SHARE} 을 누르세요`,
               "메뉴를 <b>아래로 쭉 내리세요</b>",
@@ -375,6 +399,13 @@ const STEPS = {
     : ["오른쪽 위 <b>⋮</b> 메뉴를 누르세요",
        "<b>앱 설치</b> 또는 <b>홈 화면에 추가</b> 선택",
        "<b>설치</b>를 누르면 앱 목록에 캘비가 생깁니다"],
+
+  /* 삼성 인터넷은 메뉴 이름부터 다르다. '앱 설치'를 찾으면 영영 못 찾는다 */
+  samsung: () => [
+    "오른쪽 위 <b>⋮</b> 메뉴를 누르세요 <span class='sub'>주소창 오른쪽 끝에 있습니다</span>",
+    "<b>현재 페이지 추가</b>를 누르세요 <span class='sub'>'앱 설치'라는 항목은 없습니다</span>",
+    "<b>홈 화면</b>을 고르세요",
+    "이름을 확인하고 <b>추가</b>를 누르면 끝입니다"],
 
   desktop: () => canPrompt
     ? ["위 <b>지금 설치하기</b> 버튼을 누르세요",
@@ -390,6 +421,11 @@ const WHY = {
            "홈 화면 아이콘만 지우는 것은 앱 삭제가 아니라 바로가기만 없애는 것이라, " +
            "앱은 그대로 남아 브라우저가 설치 버튼을 띄우지 않습니다. " +
            "앱 목록에서 캘비를 길게 눌러 <b>앱 정보 → 제거</b>를 해야 완전히 지워집니다.",
+  samsung: "삼성 인터넷에는 <b>'앱 설치'라는 메뉴가 없습니다.</b> " +
+           "<b>현재 페이지 추가 → 홈 화면</b>이 같은 역할을 합니다. 위 단계를 따라 주세요.<br><br>" +
+           "주소창 없는 전체 화면으로 쓰고 싶다면 <b>크롬으로 여는 편</b>이 낫습니다. " +
+           "위 <b>크롬으로 다시 열기</b> 버튼을 누르면 넘어갑니다.",
+
   desktop: "<b>버튼이 안 보이나요?</b> 크롬·엣지에서만 설치할 수 있습니다. " +
            "이미 설치했다면 버튼이 나타나지 않습니다.",
   ios:     "아이폰은 애플 정책상 버튼으로 바로 설치할 수 없어, 위 단계를 직접 거쳐야 합니다. " +
@@ -399,6 +435,7 @@ const WHY = {
 function kindOf() {
   if (isInApp) return "inapp";
   if (isIOS) return "ios";
+  if (isSamsung) return "samsung";
   if (isAndroid) return "android";
   return "desktop";
 }
@@ -414,6 +451,7 @@ function paint() {
   $("stepTitle").textContent =
     kind === "inapp"   ? "먼저 브라우저를 바꿔 주세요" :
     kind === "ios"     ? "아이폰에서 홈 화면에 추가" :
+    kind === "samsung" ? "삼성 인터넷에서 홈 화면에 추가" :
     kind === "android" ? "안드로이드에서 앱 설치" : "이 컴퓨터에 설치";
 
   $("steps").innerHTML = STEPS[kind]().map(s => `<li><div>${s}</div></li>`).join("");
@@ -423,6 +461,14 @@ function paint() {
   $("why").hidden = !why;
 
   $("installBtn").hidden = !canPrompt;
+
+  /* 설치가 안 되는 안드로이드에서는 크롬으로 넘길 길을 열어 둔다.
+     앱 내부 브라우저인지 확실히 가려내지 못하는 경우가 있어,
+     신호가 없으면 일단 보여 주는 편이 사용자에게 이롭다. */
+  const showChrome = isAndroid && !canPrompt;
+  $("chromeBtn").hidden = !showChrome;
+  if (showChrome) $("chromeBtn").href = CHROME_INTENT;
+
   $("stepCard").hidden = false;
 }
 
