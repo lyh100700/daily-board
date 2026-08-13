@@ -1271,11 +1271,53 @@ setTimeout(() => {
   showInstall(isIOS() ? "ios" : "manual");
 }, 2500);
 
-/* 서비스 워커 등록 — 인터넷이 끊겨도 앱이 열리게 한다.
-   file:// 로 직접 열었거나 지원하지 않는 환경에서는 조용히 넘어간다. */
+/* ─────────────────────────────────────────────
+   서비스 워커 — 인터넷이 끊겨도 앱이 열리게 한다.
+
+   여기에 자동 갱신도 함께 붙였다.
+   앱을 고쳐서 올려도 폰은 저장해 둔 옛 화면을 계속 쓰기 때문에,
+   사용자가 직접 새로고침하지 않으면 새 버전을 볼 수 없었다.
+   이제 앱을 열거나 다시 켤 때 스스로 확인하고 조용히 갈아끼운다.
+   ───────────────────────────────────────────── */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+
+  /* 처음 방문이라 서비스 워커가 막 붙는 것은 '갱신'이 아니다.
+     이걸 구분하지 않으면 첫 방문 때 쓸데없이 한 번 새로고침된다. */
+  const hadController = !!navigator.serviceWorker.controller;
+
+  let registration = null;
+  let updateReady  = false;
+  let reloading    = false;
+
+  /* 일정을 쓰는 도중에 새로고침되면 입력하던 내용이 날아간다.
+     창이 열려 있으면 미뤘다가 닫은 뒤에 적용한다. */
+  const isBusy = () => [...document.querySelectorAll("dialog")].some(d => d.open);
+
+  function applyUpdate() {
+    if (!updateReady || reloading || isBusy()) return;
+    reloading = true;
+    location.reload();
+  }
+
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) return;
+    updateReady = true;
+    applyUpdate();
+  });
+
+  /* 창을 닫는 순간이 갈아끼우기 가장 좋은 때다 */
+  document.querySelectorAll("dialog").forEach(d =>
+    d.addEventListener("close", () => setTimeout(applyUpdate, 200)));
+
+  /* 앱을 다시 켤 때마다 새 버전이 있는지 확인한다 */
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") registration?.update().catch(() => {});
+  });
+
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js")
+      .then(reg => { registration = reg; })
+      .catch(() => {});
   });
 }
 </script>
