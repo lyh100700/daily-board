@@ -177,8 +177,8 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
 
 .install-btn {
   width: 100%;
-  height: 52px;
-  margin-top: var(--s4);
+  height: 54px;
+  margin-bottom: var(--s4);
   border-radius: var(--r-md);
   background: var(--accent);
   color: var(--accent-ink);
@@ -187,6 +187,17 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
   box-shadow: var(--shadow-sm);
 }
 .install-btn[hidden] { display: none; }
+
+.why {
+  margin: var(--s4) 0 0;
+  padding-top: var(--s4);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.why[hidden] { display: none; }
+.why b { color: var(--ink-2); }
 
 .note {
   font-size: 13px;
@@ -233,8 +244,9 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
   <!-- 폰에서 볼 때: 기기에 맞는 단계 -->
   <section class="card" id="stepCard" hidden>
     <h2 id="stepTitle">홈 화면에 추가하기</h2>
-    <ol class="steps" id="steps"></ol>
     <button class="install-btn" id="installBtn" hidden>지금 설치하기</button>
+    <ol class="steps" id="steps"></ol>
+    <p class="why" id="why" hidden></p>
   </section>
 
   <section class="card" id="doneCard" hidden>
@@ -273,34 +285,72 @@ const SHARE = `<svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="cu
   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/></svg>`;
 
+/* 브라우저가 '설치해도 된다'는 신호를 보냈는지.
+   이 값에 따라 안내 문구가 달라진다. 있지도 않은 버튼을 가리키면 안 되기 때문이다. */
+let canPrompt = false;
+
 const STEPS = {
-  inapp: ["다른 브라우저로 열기 <span class='sub'>지금 이 화면은 카카오톡·네이버 같은 앱 안에서 열려 있어 설치가 막혀 있습니다</span>",
-          "오른쪽 위 <b>⋯</b> 또는 <b>⋮</b> 메뉴를 누르세요",
-          "<b>다른 브라우저로 열기</b> 또는 <b>Safari로 열기</b> 선택",
-          "그다음 이 안내를 다시 보시면 설치 단계가 나옵니다"],
-  ios: [`화면 아래 가운데 <b>공유 버튼</b> ${SHARE} 을 누르세요`,
-        "메뉴를 <b>아래로 쭉 내리세요</b>",
-        "<b>홈 화면에 추가</b>를 누르세요",
-        "오른쪽 위 <b>추가</b>를 누르면 끝입니다"],
-  android: ["아래 <b>지금 설치하기</b> 버튼을 누르세요 <span class='sub'>버튼이 안 보이면 아래 단계를 따르세요</span>",
-            "오른쪽 위 <b>⋮</b> 메뉴를 누르세요",
-            "<b>앱 설치</b> 또는 <b>홈 화면에 추가</b> 선택",
-            "<b>설치</b>를 누르면 앱 목록에 캘비가 생깁니다"],
+  inapp: () => ["카카오톡·네이버 같은 앱 안에서 열려 있어 설치가 막혀 있습니다",
+                "오른쪽 위 <b>⋯</b> 또는 <b>⋮</b> 메뉴를 누르세요",
+                "<b>다른 브라우저로 열기</b> 또는 <b>Safari로 열기</b> 선택",
+                "그 화면에서 이 주소를 다시 열면 설치 단계가 나옵니다"],
+
+  ios: () => [`화면 아래 가운데 <b>공유 버튼</b> ${SHARE} 을 누르세요`,
+              "메뉴를 <b>아래로 쭉 내리세요</b>",
+              "<b>홈 화면에 추가</b>를 누르세요",
+              "오른쪽 위 <b>추가</b>를 누르면 끝입니다"],
+
+  android: () => canPrompt
+    ? ["위 <b>지금 설치하기</b> 버튼을 누르세요",
+       "확인 창에서 <b>설치</b>를 누르면 끝입니다"]
+    : ["오른쪽 위 <b>⋮</b> 메뉴를 누르세요",
+       "<b>앱 설치</b> 또는 <b>홈 화면에 추가</b> 선택",
+       "<b>설치</b>를 누르면 앱 목록에 캘비가 생깁니다"],
+
+  desktop: () => canPrompt
+    ? ["위 <b>지금 설치하기</b> 버튼을 누르세요",
+       "확인 창에서 <b>설치</b>를 누르면 창 하나로 따로 열립니다"]
+    : ["주소창 오른쪽 끝의 <b>설치 아이콘</b>을 찾아 누르세요 <span class='sub'>화살표가 아래를 향한 동그란 아이콘입니다</span>",
+       "또는 브라우저 메뉴에서 <b>앱으로 설치</b>를 선택하세요"],
 };
 
-function show() {
+/* 버튼이 없을 때 왜 없는지 알려 준다. 이유를 모르면 계속 헤매게 된다. */
+const WHY = {
+  android: "<b>버튼이 안 보이나요?</b> 이미 설치되어 있을 가능성이 큽니다. " +
+           "폰의 앱 목록에서 <b>캘비</b>를 찾아보세요. 없다면 페이지를 새로고침해 보세요.",
+  desktop: "<b>버튼이 안 보이나요?</b> 크롬·엣지에서만 설치할 수 있습니다. " +
+           "이미 설치했다면 버튼이 나타나지 않습니다.",
+  ios:     "아이폰은 애플 정책상 버튼으로 바로 설치할 수 없어, 위 단계를 직접 거쳐야 합니다. " +
+           "<b>반드시 Safari로</b> 열어야 합니다.",
+};
+
+function kindOf() {
+  if (isInApp) return "inapp";
+  if (isIOS) return "ios";
+  if (isAndroid) return "android";
+  return "desktop";
+}
+
+function paint() {
   if (isStandalone()) { $("doneCard").hidden = false; return; }
 
-  if (!isPhone) {                       // PC — QR로 폰에 넘긴다
-    $("qrCard").hidden = false;
-    return;
-  }
+  const kind = kindOf();
 
-  const kind = isInApp ? "inapp" : isIOS ? "ios" : "android";
+  /* PC에서는 폰으로 넘기는 QR을 먼저 보여 준다 */
+  $("qrCard").hidden = isPhone;
+
   $("stepTitle").textContent =
-    kind === "inapp" ? "먼저 브라우저를 바꿔 주세요" :
-    kind === "ios"   ? "아이폰에서 홈 화면에 추가" : "안드로이드에서 앱 설치";
-  $("steps").innerHTML = STEPS[kind].map(s => `<li><div>${s}</div></li>`).join("");
+    kind === "inapp"   ? "먼저 브라우저를 바꿔 주세요" :
+    kind === "ios"     ? "아이폰에서 홈 화면에 추가" :
+    kind === "android" ? "안드로이드에서 앱 설치" : "이 컴퓨터에 설치";
+
+  $("steps").innerHTML = STEPS[kind]().map(s => `<li><div>${s}</div></li>`).join("");
+
+  const why = !canPrompt ? WHY[kind] : "";
+  $("why").innerHTML = why || "";
+  $("why").hidden = !why;
+
+  $("installBtn").hidden = !canPrompt;
   $("stepCard").hidden = false;
 }
 
@@ -315,23 +365,28 @@ $("copy").onclick = async () => {
   }
 };
 
-/* 안드로이드에서 브라우저가 설치를 허락하면 버튼 하나로 끝낸다 */
+/* 브라우저가 설치를 허락하면 버튼 하나로 끝낸다.
+   신호는 페이지가 뜬 뒤에 오므로, 도착하면 안내를 다시 그린다. */
 let deferred = null;
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferred = e;
-  $("installBtn").hidden = false;
+  canPrompt = true;
+  paint();
 });
+
 $("installBtn").onclick = async () => {
   if (!deferred) return;
   deferred.prompt();
   await deferred.userChoice;
   deferred = null;
-  $("installBtn").hidden = true;
+  canPrompt = false;
+  paint();
 };
+
 window.addEventListener("appinstalled", () => location.reload());
 
-show();
+paint();
 
 /* 이 페이지에서도 서비스 워커를 등록해 두어야 브라우저가 설치 가능으로 판단한다 */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
