@@ -1549,12 +1549,13 @@ function showInstall(mode) {
   if (isInstalled() || snoozed() || !$("installBar").hidden) return;
 
   $("installFace").innerHTML = ART.life("#FFFFFF");
-  $("installBtn").hidden = mode !== "prompt";
+  $("installBtn").hidden = false;
+  $("installBtn").textContent = mode === "prompt" ? "설치" : "방법 보기";
 
   if (mode === "ios") {
     $("installDesc").innerHTML = `${SHARE_ICON} 공유 버튼 → '홈 화면에 추가'`;
   } else if (mode === "manual") {
-    $("installDesc").textContent = "브라우저 메뉴 ⋮ → '앱 설치'";
+    $("installDesc").textContent = "브라우저 메뉴에서 '앱 설치'";
   }
 
   $("installBar").hidden = false;
@@ -1577,11 +1578,16 @@ window.addEventListener("beforeinstallprompt", e => {
 });
 
 $("installBtn").onclick = async () => {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;      // 설치했든 취소했든 이 창은 한 번만 쓸 수 있다
-  deferredPrompt = null;
-  hideInstall();
+  /* 브라우저가 설치를 허락한 경우에는 버튼 한 번으로 끝난다 */
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;    // 설치했든 취소했든 이 창은 한 번만 쓸 수 있다
+    deferredPrompt = null;
+    hideInstall();
+    return;
+  }
+  /* 그렇지 않으면 기기에 맞는 안내 페이지로 보낸다 */
+  location.href = "install.html";
 };
 
 $("installClose").onclick = () => hideInstall(7);

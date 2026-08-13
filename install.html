@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>캘비 설치하기</title>
+<meta name="description" content="캘비를 폰 홈 화면에 설치하는 방법">
+<meta name="theme-color" content="#FFF6DE">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<style>
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("fonts/nunito-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+2013-2014,
+                 U+2018-201A, U+201C-201E, U+2020-2022, U+2026, U+2030, U+2039-203A,
+                 U+2044, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --bg:#FFF6DE; --surface:#FFFFFF; --surface-2:#FFFBF0; --line:#F0E4C4;
+  --ink:#3B322A; --ink-2:#7A6A57; --muted:#B0A088;
+  --accent:#FFD400; --accent-ink:#3B322A; --accent-soft:#FFF0B8;
+  --purple:#7E74AF;
+  --shadow-sm: 0 1px 2px rgba(90,70,30,.06);
+  --shadow-md: 0 2px 4px rgba(90,70,30,.05), 0 10px 26px rgba(90,70,30,.09);
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s8:32px; --s10:40px;
+  --r-md:16px; --r-lg:24px; --r-full:999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#231E17; --surface:#2E2820; --surface-2:#352E25; --line:#453C2E;
+    --ink:#F6F0E2; --ink-2:#C3B49C; --muted:#8E7F66;
+    --accent:#FFD84D; --accent-ink:#241F17; --accent-soft:#3E3520;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 10px 26px rgba(0,0,0,.38);
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#231E17; --surface:#2E2820; --surface-2:#352E25; --line:#453C2E;
+  --ink:#F6F0E2; --ink-2:#C3B49C; --muted:#8E7F66;
+  --accent:#FFD84D; --accent-ink:#241F17; --accent-soft:#3E3520;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+  --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 10px 26px rgba(0,0,0,.38);
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Nunito", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+               "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+.wrap {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: var(--s10) var(--s5) var(--s10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s6);
+}
+
+.top { display: flex; align-items: center; gap: var(--s4); }
+.top img { width: 64px; height: 64px; border-radius: 18px; box-shadow: var(--shadow-md); }
+.top h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.top p  { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--s5);
+}
+.card[hidden] { display: none; }
+
+.card h2 {
+  margin: 0 0 var(--s4);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.badge {
+  padding: 2px var(--s2);
+  border-radius: var(--r-full);
+  background: var(--accent-soft);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+
+/* QR */
+.qr-row { display: flex; align-items: center; gap: var(--s5); flex-wrap: wrap; }
+.qr-row img {
+  width: 180px; height: 180px;
+  border-radius: var(--r-md);
+  background: #fff;
+  padding: var(--s2);
+  box-shadow: var(--shadow-sm);
+}
+.qr-text { flex: 1; min-width: 180px; }
+.qr-text p { margin: 0 0 var(--s3); font-size: 14.5px; color: var(--ink-2); }
+
+.url {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+}
+.url code {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 700;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.url code::-webkit-scrollbar { display: none; }
+.copy {
+  flex: none;
+  height: 34px;
+  padding: 0 var(--s3);
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* 단계 */
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+ol.steps li {
+  counter-increment: s;
+  display: flex;
+  gap: var(--s3);
+  padding: var(--s3) 0;
+  border-top: 1px solid var(--line);
+}
+ol.steps li:first-child { border-top: none; padding-top: 0; }
+ol.steps li::before {
+  content: counter(s);
+  flex: none;
+  width: 24px; height: 24px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+ol.steps b { font-weight: 800; }
+ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.share-ico {
+  display: inline-flex;
+  vertical-align: -3px;
+  width: 16px; height: 16px;
+  margin: 0 1px;
+}
+
+.install-btn {
+  width: 100%;
+  height: 52px;
+  margin-top: var(--s4);
+  border-radius: var(--r-md);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 15.5px;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+.install-btn[hidden] { display: none; }
+
+.note {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--s4);
+}
+.note b { color: var(--ink); }
+
+.foot { text-align: center; font-size: 13px; color: var(--muted); }
+.foot a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="top">
+    <img src="icons/icon-192.png" alt="">
+    <div>
+      <h1>캘비</h1>
+      <p>폰 홈 화면에 올려 앱처럼 쓰기</p>
+    </div>
+  </div>
+
+  <!-- PC에서 볼 때: 폰으로 옮기는 가장 빠른 방법 -->
+  <section class="card" id="qrCard" hidden>
+    <h2>폰으로 열기 <span class="badge">가장 빠름</span></h2>
+    <div class="qr-row">
+      <img src="assets/qr.png" alt="캘비 주소 QR 코드">
+      <div class="qr-text">
+        <p><b>폰 카메라를 켜고 이 코드를 비추세요.</b><br>주소를 입력할 필요가 없습니다.</p>
+        <div class="url">
+          <code id="url">https://lyh100700.github.io/daily-board/</code>
+          <button class="copy" id="copy">복사</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 폰에서 볼 때: 기기에 맞는 단계 -->
+  <section class="card" id="stepCard" hidden>
+    <h2 id="stepTitle">홈 화면에 추가하기</h2>
+    <ol class="steps" id="steps"></ol>
+    <button class="install-btn" id="installBtn" hidden>지금 설치하기</button>
+  </section>
+
+  <section class="card" id="doneCard" hidden>
+    <h2>이미 설치되어 있어요 🎉</h2>
+    <p style="margin:0;font-size:14.5px;color:var(--ink-2)">
+      홈 화면의 캘비 아이콘을 눌러 바로 쓰시면 됩니다.
+    </p>
+  </section>
+
+  <div class="note">
+    <b>설치하면 무엇이 달라지나요?</b><br>
+    주소창이 사라져 화면이 넓어지고, 앱 목록에 캘비가 생깁니다.
+    비행기 모드에서도 열리고, 일정은 이 기기에만 저장됩니다.
+  </div>
+
+  <p class="foot"><a href="./">← 캘비 열기</a></p>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+const isStandalone = () =>
+  matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+const ua = navigator.userAgent;
+const isIOS = /iphone|ipad|ipod/i.test(ua) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isAndroid = /android/i.test(ua);
+const isPhone = isIOS || isAndroid;
+
+/* 카카오톡·네이버 등 앱 안에서 열린 브라우저는 설치 자체가 막혀 있다 */
+const isInApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|DaumApps/i.test(ua);
+
+const SHARE = `<svg class="share-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/></svg>`;
+
+const STEPS = {
+  inapp: ["다른 브라우저로 열기 <span class='sub'>지금 이 화면은 카카오톡·네이버 같은 앱 안에서 열려 있어 설치가 막혀 있습니다</span>",
+          "오른쪽 위 <b>⋯</b> 또는 <b>⋮</b> 메뉴를 누르세요",
+          "<b>다른 브라우저로 열기</b> 또는 <b>Safari로 열기</b> 선택",
+          "그다음 이 안내를 다시 보시면 설치 단계가 나옵니다"],
+  ios: [`화면 아래 가운데 <b>공유 버튼</b> ${SHARE} 을 누르세요`,
+        "메뉴를 <b>아래로 쭉 내리세요</b>",
+        "<b>홈 화면에 추가</b>를 누르세요",
+        "오른쪽 위 <b>추가</b>를 누르면 끝입니다"],
+  android: ["아래 <b>지금 설치하기</b> 버튼을 누르세요 <span class='sub'>버튼이 안 보이면 아래 단계를 따르세요</span>",
+            "오른쪽 위 <b>⋮</b> 메뉴를 누르세요",
+            "<b>앱 설치</b> 또는 <b>홈 화면에 추가</b> 선택",
+            "<b>설치</b>를 누르면 앱 목록에 캘비가 생깁니다"],
+};
+
+function show() {
+  if (isStandalone()) { $("doneCard").hidden = false; return; }
+
+  if (!isPhone) {                       // PC — QR로 폰에 넘긴다
+    $("qrCard").hidden = false;
+    return;
+  }
+
+  const kind = isInApp ? "inapp" : isIOS ? "ios" : "android";
+  $("stepTitle").textContent =
+    kind === "inapp" ? "먼저 브라우저를 바꿔 주세요" :
+    kind === "ios"   ? "아이폰에서 홈 화면에 추가" : "안드로이드에서 앱 설치";
+  $("steps").innerHTML = STEPS[kind].map(s => `<li><div>${s}</div></li>`).join("");
+  $("stepCard").hidden = false;
+}
+
+/* 주소 복사 */
+$("copy").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($("url").textContent.trim());
+    $("copy").textContent = "복사됨";
+    setTimeout(() => { $("copy").textContent = "복사"; }, 1600);
+  } catch {
+    $("copy").textContent = "직접 선택";
+  }
+};
+
+/* 안드로이드에서 브라우저가 설치를 허락하면 버튼 하나로 끝낸다 */
+let deferred = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferred = e;
+  $("installBtn").hidden = false;
+});
+$("installBtn").onclick = async () => {
+  if (!deferred) return;
+  deferred.prompt();
+  await deferred.userChoice;
+  deferred = null;
+  $("installBtn").hidden = true;
+};
+window.addEventListener("appinstalled", () => location.reload());
+
+show();
+
+/* 이 페이지에서도 서비스 워커를 등록해 두어야 브라우저가 설치 가능으로 판단한다 */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+
+</body>
+</html>

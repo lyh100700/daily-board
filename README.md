@@ -19,8 +19,20 @@
 
 ## 폰에 설치하기
 
-**아이폰** Safari로 접속 → 공유 버튼 → `홈 화면에 추가`
-**안드로이드** Chrome으로 접속 → 메뉴 → `앱 설치`
+**폰 카메라로 아래 QR을 비추면** 주소를 입력하지 않고 바로 열립니다.
+
+<img src="assets/qr.png" width="180" alt="캘비 주소 QR">
+
+https://lyh100700.github.io/daily-board/
+
+설치 방법은 기기마다 다릅니다. **[설치 안내 페이지](https://lyh100700.github.io/daily-board/install.html)**
+에 접속하면 그 기기에 맞는 단계가 나옵니다.
+
+- **아이폰** Safari → 공유 버튼 → `홈 화면에 추가`
+- **안드로이드** Chrome → 메뉴 → `앱 설치`
+
+> 카카오톡·네이버 앱 안에서 열린 브라우저로는 설치할 수 없습니다.
+> 그 화면 메뉴에서 `다른 브라우저로 열기`를 먼저 선택하세요.
 
 설치하면 주소창 없이 전체 화면으로 뜨고, 비행기 모드에서도 열립니다.
 
@@ -28,6 +40,8 @@
 
 ```
 index.html            앱 전체 (화면·기능·디자인이 이 안에 다 있음)
+install.html          기기에 맞는 설치 안내
+assets/qr.png         앱 주소 QR 코드
 assets/splash.jpg     앱을 열 때 잠깐 보이는 첫 화면
 data/knowledge.js     오늘의 상식 콘텐츠
 data/words.js         오늘의 단어 콘텐츠
