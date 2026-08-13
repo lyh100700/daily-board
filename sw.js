@@ -1,8 +1,8 @@
 /* 서비스 워커 — 앱 파일을 폰에 저장해 두어 비행기 모드에서도 열리게 한다.
    파일을 고친 뒤에는 아래 VERSION 숫자를 올려야 새 버전이 반영된다. */
 
-const VERSION = "v12";
-const CACHE   = `mallang-${VERSION}`;
+const VERSION = "v13";
+const CACHE   = `calbee-${VERSION}`;
 
 const SHELL = [
   "./",
@@ -15,6 +15,9 @@ const SHELL = [
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png",
+  "./icons/icon-maskable-512.png",
+  "./icons/brand-144.png",
+  "./assets/splash.jpg",
 ];
 
 /* 설치할 때 앱 파일을 통째로 받아 둔다 */
