@@ -212,6 +212,62 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
 
 .foot { text-align: center; font-size: 13px; color: var(--muted); }
 .foot a { color: var(--ink-2); }
+
+/* 상태 확인 */
+.diag {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--s4) var(--s5);
+}
+.diag summary {
+  cursor: pointer;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  list-style: none;
+}
+.diag summary::-webkit-details-marker { display: none; }
+.diag summary::before { content: "▸ "; color: var(--muted); }
+.diag[open] summary::before { content: "▾ "; }
+
+.diag-lead {
+  margin: var(--s4) 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-2);
+}
+
+.diag-list { margin: 0; padding: 0; list-style: none; }
+.diag-list li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.diag-list li:first-child { border-top: none; }
+.diag-list .k { flex: none; width: 128px; color: var(--ink-2); font-weight: 700; }
+.diag-list .v { flex: 1; min-width: 0; font-weight: 700; word-break: break-word; }
+.diag-list .ok  { color: #2E8B57; }
+.diag-list .bad { color: #C4544A; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .diag-list .ok  { color: #7FCFA0; }
+  :root:not([data-theme="light"]) .diag-list .bad { color: #EE9384; }
+}
+
+.diag-btn {
+  width: 100%;
+  height: 42px;
+  margin-top: var(--s4);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
 </style>
 </head>
 <body>
@@ -261,6 +317,19 @@ ol.steps .sub { display: block; font-size: 13px; color: var(--muted); margin-top
     주소창이 사라져 화면이 넓어지고, 앱 목록에 캘비가 생깁니다.
     비행기 모드에서도 열리고, 일정은 이 기기에만 저장됩니다.
   </div>
+
+  <details class="diag">
+    <summary>설치가 안 되나요? 상태 확인하기</summary>
+
+    <p class="diag-lead">
+      안드로이드 크롬에서는 메뉴에 뜨는 이름으로도 알 수 있습니다.<br>
+      <b>앱 설치</b>가 보이면 제대로 된 설치, <b>홈 화면에 추가</b>만 보이면
+      아래 항목 중 무언가가 어긋난 상태입니다.
+    </p>
+
+    <ul class="diag-list" id="diagList"></ul>
+    <button class="diag-btn" id="recheck">다시 검사</button>
+  </details>
 
   <p class="foot"><a href="./">← 캘비 열기</a></p>
 
@@ -387,6 +456,58 @@ $("installBtn").onclick = async () => {
 window.addEventListener("appinstalled", () => location.reload());
 
 paint();
+
+/* ─────────────────────────────────────────────
+   상태 확인 — 설치가 왜 안 되는지 추측하지 않고 직접 본다
+   ───────────────────────────────────────────── */
+function browserName() {
+  if (isInApp)                       return "앱 안 브라우저 (설치 불가)";
+  if (/SamsungBrowser/i.test(ua))    return "삼성 인터넷";
+  if (/Whale/i.test(ua))             return "네이버 웨일";
+  if (/EdgA|Edg/i.test(ua))          return "엣지";
+  if (/Firefox|FxiOS/i.test(ua))     return "파이어폭스 (설치 미지원)";
+  if (/OPR|Opera/i.test(ua))         return "오페라";
+  if (/CriOS/i.test(ua))             return "크롬 (아이폰)";
+  if (/Chrome/i.test(ua))            return "크롬";
+  if (/Safari/i.test(ua))            return "사파리";
+  return "알 수 없음";
+}
+
+async function diagnose() {
+  const rows = [];
+  const mark = (k, ok, text) => rows.push({ k, ok, text: text ?? (ok ? "정상" : "아니오") });
+
+  mark("브라우저", !isInApp && !/Firefox|FxiOS/i.test(ua), browserName());
+  mark("보안 연결", location.protocol === "https:", location.protocol.replace(":", ""));
+
+  try {
+    const m = await (await fetch("manifest.webmanifest", { cache: "no-store" })).json();
+    const has192 = m.icons?.some(i => i.sizes === "192x192");
+    const has512 = m.icons?.some(i => i.sizes === "512x512");
+    mark("앱 정보 파일", !!m.name && has192 && has512, m.name ? `${m.name} · 아이콘 확인` : "읽기 실패");
+    mark("전체화면 설정", m.display === "standalone", m.display || "없음");
+  } catch {
+    mark("앱 정보 파일", false, "읽지 못함");
+  }
+
+  let reg = null;
+  try { reg = await navigator.serviceWorker?.getRegistration(); } catch {}
+  mark("오프라인 기능 등록", !!reg, reg ? "등록됨" : "아직 안 됨");
+  mark("오프라인 기능 작동", !!navigator.serviceWorker?.controller,
+       navigator.serviceWorker?.controller ? "작동 중" : "새로고침 한 번 필요");
+
+  mark("설치 신호", canPrompt, canPrompt ? "받음" : "아직 없음");
+  mark("이미 설치됨", !isStandalone(), isStandalone() ? "예 — 앱으로 열림" : "아니오");
+
+  $("diagList").innerHTML = rows.map(r => `
+    <li>
+      <span class="k">${r.k}</span>
+      <span class="v ${r.ok ? "ok" : "bad"}">${r.ok ? "✓" : "✕"} ${r.text}</span>
+    </li>`).join("");
+}
+
+$("recheck").onclick = diagnose;
+diagnose();
 
 /* 이 페이지에서도 서비스 워커를 등록해 두어야 브라우저가 설치 가능으로 판단한다 */
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
