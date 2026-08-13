@@ -171,13 +171,14 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 
 .cell {
   position: relative;
-  height: 58px;
+  height: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding-top: var(--s1);
+  gap: 2px;
+  padding: var(--s1) 2px 0;
   border-radius: var(--r-md);
+  overflow: hidden;
   transition: background .15s ease;
 }
 .cell:hover { background: var(--surface-2); }
@@ -186,9 +187,9 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .num {
   display: grid;
   place-items: center;
-  width: 30px; height: 30px;
+  width: 26px; height: 26px;
   border-radius: var(--r-full);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   transition: background .15s ease, color .15s ease;
@@ -199,26 +200,49 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .cell.today .num  { background: var(--accent-soft); font-weight: 800; }
 .cell.picked .num { background: var(--accent); color: var(--accent-ink); font-weight: 800; box-shadow: var(--shadow-sm); }
 
-/* 날짜별 일정 요약 — 색점 (최대 3개) */
-.dots { display: flex; gap: 3px; height: 6px; align-items: center; }
-.dots i { width: 5px; height: 5px; border-radius: var(--r-full); background: var(--c); }
-.dots .more { font-size: 9px; color: var(--muted); font-weight: 700; line-height: 1; }
+/* 날짜별 일정 요약 — 작은 막대에 제목까지 보여준다 */
+.minis { width: 100%; display: flex; flex-direction: column; gap: 2px; }
+
+.mini {
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--c) 30%, transparent);
+  color: var(--ink);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: left;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mini.done { opacity: .42; text-decoration: line-through; }
+
+.more {
+  padding-left: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--muted);
+  text-align: left;
+}
 
 /* ─────────────────────────────────────────────
-   5. 선택한 날의 상세
+   5. 날짜 팝업 안의 일정 목록
    ───────────────────────────────────────────── */
-.day-panel { padding: var(--s6) var(--s5) 0; }
+.day-title { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; }
+.day-title h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+.day-title .count { font-size: 13px; color: var(--muted); font-weight: 600; flex: none; }
 
-.day-head {
+.events {
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
   gap: var(--s2);
-  margin-bottom: var(--s4);
+  max-height: 46svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 calc(var(--s1) * -1);
+  padding: var(--s1);
 }
-.day-head h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
-.day-head .count { font-size: 13px; color: var(--muted); font-weight: 600; }
-
-.events { display: flex; flex-direction: column; gap: var(--s2); }
 
 .ev {
   display: flex;
@@ -288,7 +312,6 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 
 .add-btn {
   width: 100%;
-  margin-top: var(--s3);
   height: 52px;
   display: flex;
   align-items: center;
@@ -426,19 +449,27 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
     <div class="grid" id="grid"></div>
   </section>
 
-  <section class="day-panel">
-    <div class="day-head">
-      <h2 id="dayLabel">8월 13일 목요일</h2>
-      <span class="count" id="dayCount"></span>
+</div>
+
+<!-- 날짜를 누르면 뜨는 팝업 -->
+<dialog class="sheet" id="daySheet">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <div class="day-title">
+        <h2 id="dayLabel">8월 13일 목요일</h2>
+        <span class="count" id="dayCount"></span>
+      </div>
+      <button type="button" class="icon-btn" id="dayClose" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
     </div>
     <div class="events" id="events"></div>
     <button class="add-btn" id="addBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       일정 추가
     </button>
-  </section>
-
-</div>
+  </div>
+</dialog>
 
 <dialog class="sheet" id="sheet">
   <form class="sheet-in" id="form">
@@ -595,21 +626,24 @@ function renderMonth() {
     const date = `${view.y}-${String(view.m).padStart(2,"0")}-${String(n).padStart(2,"0")}`;
     const list = eventsOn(date);
 
-    const dots = list.slice(0, 3)
-      .map(e => `<i style="--c:${catOf(e.cat).color}"></i>`).join("")
-      + (list.length > 3 ? `<span class="more">+</span>` : "");
+    /* 칸이 좁으니 두 개까지만 보여주고 나머지는 개수로 알린다 */
+    const minis = list.slice(0, 2)
+      .map(e => `<span class="mini${e.done ? " done" : ""}" style="--c:${catOf(e.cat).color}">${esc(e.title)}</span>`)
+      .join("")
+      + (list.length > 2 ? `<span class="more">+${list.length - 2}</span>` : "");
 
     html += `<button class="cell${date === TODAY ? " today" : ""}${date === picked ? " picked" : ""}"
                      data-date="${date}" data-dow="${i % 7}"
                      aria-label="${view.m}월 ${n}일, 일정 ${list.length}개">
                <span class="num">${n}</span>
-               <span class="dots">${dots}</span>
+               <span class="minis">${minis}</span>
              </button>`;
   }
   $("grid").innerHTML = html;
 }
 
-function renderDay() {
+/* 날짜 팝업 안쪽을 다시 그린다 */
+function renderDaySheet() {
   const [y, m, d] = picked.split("-").map(Number);
   const w = new Date(y, m - 1, d).getDay();
   const list = eventsOn(picked);
@@ -643,7 +677,19 @@ function renderDay() {
   }).join("");
 }
 
-const render = () => { renderMonth(); renderDay(); };
+/* 팝업이 열려 있을 때만 그 안쪽도 같이 갱신한다 */
+const render = () => {
+  renderMonth();
+  if ($("daySheet").open) renderDaySheet();
+};
+
+/* 날짜를 눌렀을 때 — 팝업을 띄운다 */
+function openDay(date) {
+  picked = date;
+  renderMonth();
+  renderDaySheet();
+  if (!$("daySheet").open) $("daySheet").showModal();
+}
 
 /* ─────────────────────────────────────────────
    입력 시트
@@ -694,13 +740,14 @@ $("todayBtn").onclick = () => {
   render();
 };
 
-/* 날짜를 누르면 아래에 그 날의 상세가 열린다 */
+/* 날짜를 누르면 그 날의 팝업이 뜬다 */
 $("grid").onclick = ev => {
   const cell = ev.target.closest(".cell[data-date]");
   if (!cell) return;
-  picked = cell.dataset.date;
-  render();
+  openDay(cell.dataset.date);
 };
+
+$("dayClose").onclick = () => $("daySheet").close();
 
 $("events").onclick = ev => {
   const edit = ev.target.closest("[data-edit]");
@@ -709,7 +756,7 @@ $("events").onclick = ev => {
   const toggle = ev.target.closest("[data-toggle]");
   if (toggle) {
     const e = events.find(v => v.id === toggle.dataset.toggle);
-    if (e) { e.done = !e.done; save(); renderDay(); }
+    if (e) { e.done = !e.done; save(); render(); }
   }
 };
 
