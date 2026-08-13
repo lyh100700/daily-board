@@ -1,7 +1,7 @@
 /* 서비스 워커 — 앱 파일을 폰에 저장해 두어 비행기 모드에서도 열리게 한다.
    파일을 고친 뒤에는 아래 VERSION 숫자를 올려야 새 버전이 반영된다. */
 
-const VERSION = "v17";
+const VERSION = "v18";
 const CACHE   = `calbee-${VERSION}`;
 
 const SHELL = [
@@ -22,13 +22,17 @@ const SHELL = [
   "./assets/qr.png",
 ];
 
-/* 설치할 때 앱 파일을 통째로 받아 둔다 */
+/* 설치할 때 앱 파일을 미리 받아 둔다.
+
+   파일을 하나씩 따로 받는다. addAll 은 하나만 실패해도 전체가 취소되는데,
+   그러면 서비스 워커 자체가 설치되지 않고 브라우저가 '앱 설치'를 막아 버린다.
+   그림 한 장 못 받았다고 앱을 못 깔게 되는 일은 없어야 한다. */
 self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open(CACHE)
-      .then(c => c.addAll(SHELL))
-      .then(() => self.skipWaiting())
-  );
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    await Promise.all(SHELL.map(url => c.add(url).catch(() => {})));
+    await self.skipWaiting();
+  })());
 });
 
 /* 새 버전이 설치되면 옛 캐시를 지운다 */

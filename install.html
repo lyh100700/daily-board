@@ -385,8 +385,11 @@ const STEPS = {
 
 /* 버튼이 없을 때 왜 없는지 알려 준다. 이유를 모르면 계속 헤매게 된다. */
 const WHY = {
-  android: "<b>버튼이 안 보이나요?</b> 이미 설치되어 있을 가능성이 큽니다. " +
-           "폰의 앱 목록에서 <b>캘비</b>를 찾아보세요. 없다면 페이지를 새로고침해 보세요.",
+  android: "<b>버튼이 안 보이나요?</b> 아래 <b>상태 확인하기</b>를 눌러 원인을 볼 수 있습니다.<br><br>" +
+           "가장 흔한 원인은 <b>이미 설치되어 있는 경우</b>입니다. " +
+           "홈 화면 아이콘만 지우는 것은 앱 삭제가 아니라 바로가기만 없애는 것이라, " +
+           "앱은 그대로 남아 브라우저가 설치 버튼을 띄우지 않습니다. " +
+           "앱 목록에서 캘비를 길게 눌러 <b>앱 정보 → 제거</b>를 해야 완전히 지워집니다.",
   desktop: "<b>버튼이 안 보이나요?</b> 크롬·엣지에서만 설치할 수 있습니다. " +
            "이미 설치했다면 버튼이 나타나지 않습니다.",
   ios:     "아이폰은 애플 정책상 버튼으로 바로 설치할 수 없어, 위 단계를 직접 거쳐야 합니다. " +
@@ -460,6 +463,16 @@ paint();
 /* ─────────────────────────────────────────────
    상태 확인 — 설치가 왜 안 되는지 추측하지 않고 직접 본다
    ───────────────────────────────────────────── */
+/* 크롬은 사용자가 화면을 한 번이라도 건드린 뒤에 설치 신호를 보내는 경우가 있다.
+   가만히 보고만 있으면 버튼이 영영 안 나타난다. */
+let tapped = false;
+["pointerdown", "keydown", "scroll"].forEach(ev =>
+  window.addEventListener(ev, () => {
+    if (tapped) return;
+    tapped = true;
+    setTimeout(diagnose, 400);
+  }, { passive: true }));
+
 function browserName() {
   if (isInApp)                       return "앱 안 브라우저 (설치 불가)";
   if (/SamsungBrowser/i.test(ua))    return "삼성 인터넷";
@@ -496,8 +509,30 @@ async function diagnose() {
   mark("오프라인 기능 작동", !!navigator.serviceWorker?.controller,
        navigator.serviceWorker?.controller ? "작동 중" : "새로고침 한 번 필요");
 
+  mark("화면 조작", tapped, tapped ? "감지됨" : "화면을 한 번 눌러 주세요");
   mark("설치 신호", canPrompt, canPrompt ? "받음" : "아직 없음");
-  mark("이미 설치됨", !isStandalone(), isStandalone() ? "예 — 앱으로 열림" : "아니오");
+
+  /* 홈 화면 아이콘만 지워도 앱은 남아 있다. 그 상태면 브라우저가 설치 신호를
+     보내지 않는데, 사용자는 '지웠는데 왜 안 되지' 하고 헤매게 된다.
+     브라우저에 직접 물어봐서 확실히 알려 준다. */
+  let installed = isStandalone();
+  let detail = installed ? "예 — 앱으로 열림" : "아니오";
+  if (!installed && navigator.getInstalledRelatedApps) {
+    try {
+      const apps = await navigator.getInstalledRelatedApps();
+      if (apps.length) { installed = true; detail = "예 — 폰에 이미 깔려 있음"; }
+    } catch {}
+  }
+  mark("이미 설치됨", !installed, detail);
+
+  if (installed && !isStandalone()) {
+    $("why").innerHTML =
+      "<b>이미 설치되어 있습니다.</b> 그래서 설치 버튼이 나오지 않습니다. " +
+      "앱 목록(앱 서랍)에서 <b>캘비</b>를 찾아보세요.<br><br>" +
+      "다시 설치하려면 <b>홈 화면 아이콘만 지우는 것으로는 부족합니다.</b> " +
+      "앱 목록에서 캘비를 길게 눌러 <b>앱 정보 → 제거</b>를 해야 완전히 지워집니다.";
+    $("why").hidden = false;
+  }
 
   $("diagList").innerHTML = rows.map(r => `
     <li>
