@@ -1209,20 +1209,24 @@ const snoozed = () => Number(localStorage.getItem(INSTALL_KEY) || 0) > Date.now(
 
 let deferredPrompt = null;
 
-function showInstall({ ios } = {}) {
-  if (isInstalled() || snoozed()) return;
+const SHARE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/></svg>`;
+
+/* mode
+   "prompt" 크롬이 설치해도 된다고 알려온 경우 — 버튼 한 번으로 끝난다
+   "ios"    아이폰 — 애플이 막아두어 공유 메뉴로 안내한다
+   "manual" 신호가 오지 않은 경우 — 메뉴 위치를 알려준다 */
+function showInstall(mode) {
+  if (isInstalled() || snoozed() || !$("installBar").hidden) return;
 
   $("installFace").innerHTML = ART.life("#FFFFFF");
-  $("installBtn").hidden = !!ios;
+  $("installBtn").hidden = mode !== "prompt";
 
-  if (ios) {
-    /* 사파리 아래쪽 공유 버튼을 가리키는 안내 */
-    $("installDesc").innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/>
-      </svg>
-      공유 버튼 → '홈 화면에 추가'`;
+  if (mode === "ios") {
+    $("installDesc").innerHTML = `${SHARE_ICON} 공유 버튼 → '홈 화면에 추가'`;
+  } else if (mode === "manual") {
+    $("installDesc").textContent = "브라우저 메뉴 ⋮ → '앱 설치'";
   }
 
   $("installBar").hidden = false;
@@ -1241,7 +1245,7 @@ function hideInstall(snoozeDays = 0) {
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredPrompt = e;
-  showInstall();
+  showInstall("prompt");
 });
 
 $("installBtn").onclick = async () => {
@@ -1259,10 +1263,13 @@ window.addEventListener("appinstalled", () => {
   hideInstall();
 });
 
-/* 아이폰은 beforeinstallprompt가 오지 않으므로 직접 판단해 띄운다 */
-if (isIOS() && !isInstalled()) {
-  setTimeout(() => showInstall({ ios: true }), 1200);
-}
+/* 신호를 기다리되, 오지 않아도 안내는 뜨게 한다.
+   브라우저마다 신호를 보내는 조건이 달라서, 신호에만 기대면
+   아무것도 안 보이는 상태가 되어버린다. */
+setTimeout(() => {
+  if (isInstalled()) return;
+  showInstall(isIOS() ? "ios" : "manual");
+}, 2500);
 
 /* 서비스 워커 등록 — 인터넷이 끊겨도 앱이 열리게 한다.
    file:// 로 직접 열었거나 지원하지 않는 환경에서는 조용히 넘어간다. */
