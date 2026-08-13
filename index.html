@@ -498,6 +498,73 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .add-btn svg { width: 17px; height: 17px; }
 
 /* ─────────────────────────────────────────────
+   6-1. 설치 안내 막대
+
+   크롬 메뉴에서 '앱 설치'를 찾기가 기기마다 달라 헷갈리므로
+   앱 안에서 바로 설치할 수 있게 띄운다.
+   ───────────────────────────────────────────── */
+.install {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--s4) + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(428px, calc(100% - var(--s8)));
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+  animation: popUp .32s cubic-bezier(.2,.85,.3,1);
+}
+.install[hidden] { display: none; }
+
+@keyframes popUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+}
+
+/* 막대가 떠 있을 때 마지막 카드가 가려지지 않게 자리를 비운다 */
+body.has-install .app { padding-bottom: 128px; }
+
+.install-face {
+  flex: none;
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  background: var(--accent);
+}
+.install-face svg { width: 30px; height: 30px; }
+
+.install-body { flex: 1; min-width: 0; }
+.install-title { font-size: 14.5px; font-weight: 800; letter-spacing: -.01em; }
+.install-desc {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+.install-desc svg { width: 14px; height: 14px; flex: none; }
+
+.install-btn {
+  flex: none;
+  height: 38px;
+  padding: 0 var(--s4);
+  border-radius: var(--r-full);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 14px;
+  font-weight: 800;
+  transition: transform .15s ease;
+}
+.install-btn:hover { transform: translateY(-1px); }
+.install-btn[hidden] { display: none; }
+
+/* ─────────────────────────────────────────────
    7. 입력 시트
    ───────────────────────────────────────────── */
 dialog.sheet {
@@ -625,6 +692,19 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
   <!-- 일정 확인하러 온 김에 눈에 들어오도록 달력 바로 아래 둔다 -->
   <section class="daily" id="daily"></section>
 
+</div>
+
+<!-- 설치 안내 막대 (설치 가능할 때만 나타난다) -->
+<div class="install" id="installBar" hidden>
+  <span class="install-face" id="installFace"></span>
+  <div class="install-body">
+    <div class="install-title">홈 화면에 추가</div>
+    <div class="install-desc" id="installDesc">주소창 없이 앱처럼 쓸 수 있어요</div>
+  </div>
+  <button class="install-btn" id="installBtn">설치</button>
+  <button class="icon-btn" id="installClose" aria-label="나중에 하기">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
 </div>
 
 <!-- 오늘의 상식 / 오늘의 단어 팝업 -->
@@ -1106,6 +1186,83 @@ if (typeof KNOWLEDGE !== "undefined" && typeof WORDS !== "undefined"
 $("brand").innerHTML = ART.life("#FFFFFF");
 
 render();
+
+/* ─────────────────────────────────────────────
+   홈 화면에 추가 안내
+
+   안드로이드(크롬)는 브라우저가 '설치해도 된다'고 알려주면
+   그 순간을 붙잡아 두었다가 버튼을 눌렀을 때 설치창을 띄운다.
+   아이폰은 애플이 이 기능을 막아두어서 안내 문구만 보여준다.
+   ───────────────────────────────────────────── */
+const INSTALL_KEY = "mallang-cal:install-hidden-until";
+
+/* 이미 홈 화면 앱으로 열려 있는가 */
+const isInstalled = () =>
+  matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);  // 아이패드
+
+/* 닫기를 누르면 일주일 동안 다시 뜨지 않는다 */
+const snoozed = () => Number(localStorage.getItem(INSTALL_KEY) || 0) > Date.now();
+
+let deferredPrompt = null;
+
+function showInstall({ ios } = {}) {
+  if (isInstalled() || snoozed()) return;
+
+  $("installFace").innerHTML = ART.life("#FFFFFF");
+  $("installBtn").hidden = !!ios;
+
+  if (ios) {
+    /* 사파리 아래쪽 공유 버튼을 가리키는 안내 */
+    $("installDesc").innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/>
+      </svg>
+      공유 버튼 → '홈 화면에 추가'`;
+  }
+
+  $("installBar").hidden = false;
+  document.body.classList.add("has-install");
+}
+
+function hideInstall(snoozeDays = 0) {
+  $("installBar").hidden = true;
+  document.body.classList.remove("has-install");
+  if (snoozeDays) {
+    localStorage.setItem(INSTALL_KEY, String(Date.now() + snoozeDays * 864e5));
+  }
+}
+
+/* 크롬이 '설치 가능'을 알려주는 순간 — 기본 안내를 막고 우리 막대를 띄운다 */
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstall();
+});
+
+$("installBtn").onclick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;      // 설치했든 취소했든 이 창은 한 번만 쓸 수 있다
+  deferredPrompt = null;
+  hideInstall();
+};
+
+$("installClose").onclick = () => hideInstall(7);
+
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  hideInstall();
+});
+
+/* 아이폰은 beforeinstallprompt가 오지 않으므로 직접 판단해 띄운다 */
+if (isIOS() && !isInstalled()) {
+  setTimeout(() => showInstall({ ios: true }), 1200);
+}
 
 /* 서비스 워커 등록 — 인터넷이 끊겨도 앱이 열리게 한다.
    file:// 로 직접 열었거나 지원하지 않는 환경에서는 조용히 넘어간다. */
