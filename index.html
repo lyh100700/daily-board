@@ -424,6 +424,46 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .tip { display: flex; gap: var(--s3); font-size: 13.5px; line-height: 1.65; color: var(--ink-2); }
 .tip b { flex: none; color: var(--c); font-weight: 800; letter-spacing: .04em; }
 
+/* 내용이 바뀐 걸 알아채도록 살짝 올라오며 나타난다 */
+@keyframes swapIn { from { opacity: 0; transform: translateY(8px); } }
+.detail.swap > * { animation: swapIn .24s cubic-bezier(.2,.7,.3,1); }
+
+.detail-actions { display: flex; gap: var(--s2); }
+
+.shuffle {
+  flex: 1;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--c) 15%, var(--surface-2));
+  border: 1.5px solid color-mix(in oklab, var(--c) 32%, transparent);
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: background .15s ease, transform .15s ease;
+}
+.shuffle:hover { background: color-mix(in oklab, var(--c) 24%, var(--surface-2)); transform: translateY(-1px); }
+.shuffle:active { transform: translateY(0); }
+.shuffle svg { width: 17px; height: 17px; }
+
+.back-today {
+  flex: none;
+  height: 48px;
+  padding: 0 var(--s5);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  color: var(--ink-2);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: border-color .15s ease;
+}
+.back-today:hover { border-color: var(--accent); }
+.back-today[hidden] { display: none; }
+
 /* ─────────────────────────────────────────────
    6. 날짜 팝업 안의 일정 목록
    ───────────────────────────────────────────── */
@@ -807,6 +847,15 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       </button>
     </div>
     <div class="detail" id="dailyBody"></div>
+    <div class="detail-actions">
+      <button type="button" class="shuffle" id="dailyShuffle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>
+        </svg>
+        다른 것 보기
+      </button>
+      <button type="button" class="back-today" id="dailyToday" hidden>오늘</button>
+    </div>
   </div>
 </dialog>
 
@@ -1293,39 +1342,83 @@ function renderDaily() {
     dailyCard("word", `${w.word}${w.kr ? ` [${w.kr}]` : ""} · ${w.ko.split(",")[0]}`);
 }
 
-function openDaily(kind) {
-  const d = DAILY[kind];
-  $("dailyTitle").textContent = d.label;
-  $("dailyBody").style.setProperty("--c", d.color);
+/* 지금 보고 있는 것.
+   idx 가 null 이면 '오늘의 것', 숫자면 넘겨서 본 것이다. */
+let daily = { kind: "knowledge", idx: null };
 
+const listOf = kind => (kind === "knowledge" ? KNOWLEDGE : WORDS);
+
+function currentIndex() {
+  return daily.idx ?? dayOfYear() % listOf(daily.kind).length;
+}
+
+function bodyHTML(kind, item) {
   if (kind === "knowledge") {
-    const k = pickToday(KNOWLEDGE);
-    $("dailyBody").innerHTML = `
-      <span class="tagline">${esc(k.tag)}</span>
-      <h3>${esc(k.q)}</h3>
-      <p>${esc(k.a)}</p>`;
-  } else {
-    const w = pickToday(WORDS);
-    $("dailyBody").innerHTML = `
-      <div class="word-block">
-        <div class="word-head">
-          <span class="word">${esc(w.word)}</span>
-          <span class="pos">${esc(w.pos)}</span>
-        </div>
-        <div class="word-sound">
-          <span class="ipa">${esc(w.ipa)}</span>
-          ${w.kr ? `<span class="kr">[${esc(w.kr)}]</span>` : ""}
-        </div>
-        <div class="word-ko">${esc(w.ko)}</div>
-      </div>
-      <div class="ex-box">
-        <div class="ex-en">${esc(w.ex)}</div>
-        <div class="ex-ko">${esc(w.exKo)}</div>
-      </div>
-      ${w.tip ? `<div class="tip"><b>TIP</b><span>${esc(w.tip)}</span></div>` : ""}`;
+    return `
+      <span class="tagline">${esc(item.tag)}</span>
+      <h3>${esc(item.q)}</h3>
+      <p>${esc(item.a)}</p>`;
   }
+  return `
+    <div class="word-block">
+      <div class="word-head">
+        <span class="word">${esc(item.word)}</span>
+        <span class="pos">${esc(item.pos)}</span>
+      </div>
+      <div class="word-sound">
+        <span class="ipa">${esc(item.ipa)}</span>
+        ${item.kr ? `<span class="kr">[${esc(item.kr)}]</span>` : ""}
+      </div>
+      <div class="word-ko">${esc(item.ko)}</div>
+    </div>
+    <div class="ex-box">
+      <div class="ex-en">${esc(item.ex)}</div>
+      <div class="ex-ko">${esc(item.exKo)}</div>
+    </div>
+    ${item.tip ? `<div class="tip"><b>TIP</b><span>${esc(item.tip)}</span></div>` : ""}`;
+}
+
+function paintDailySheet({ animate } = {}) {
+  const d    = DAILY[daily.kind];
+  const list = listOf(daily.kind);
+  const i    = currentIndex();
+  const isToday = daily.idx === null;
+
+  $("dailySheet").style.setProperty("--c", d.color);
+  $("dailyTitle").textContent = isToday ? d.label : d.label.replace("오늘의 ", "");
+  $("dailyToday").hidden = isToday;
+  $("dailyBody").innerHTML = bodyHTML(daily.kind, list[i]);
+
+  if (animate) {                       // 애니메이션을 처음부터 다시 재생시킨다
+    $("dailyBody").classList.remove("swap");
+    void $("dailyBody").offsetWidth;
+    $("dailyBody").classList.add("swap");
+  }
+}
+
+function openDaily(kind) {
+  daily = { kind, idx: null };         // 열 때는 늘 오늘의 것부터
+  paintDailySheet();
   $("dailySheet").showModal();
 }
+
+/* 방금 본 것이 또 나오면 눌러도 안 바뀐 것처럼 느껴진다. 반드시 다른 것을 고른다. */
+$("dailyShuffle").onclick = () => {
+  const n = listOf(daily.kind).length;
+  if (n < 2) return;
+
+  const now = currentIndex();
+  let next = now;
+  while (next === now) next = Math.floor(Math.random() * n);
+
+  daily.idx = next;
+  paintDailySheet({ animate: true });
+};
+
+$("dailyToday").onclick = () => {
+  daily.idx = null;
+  paintDailySheet({ animate: true });
+};
 
 $("daily").onclick = ev => {
   const card = ev.target.closest("[data-daily]");
