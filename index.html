@@ -314,9 +314,10 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 }
 .detail p { margin: 0; font-size: 15px; line-height: 1.75; color: var(--ink-2); }
 
-.word-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.word-block { display: flex; flex-direction: column; gap: var(--s2); }
+
+.word-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s3); }
 .word { font-size: 30px; font-weight: 800; letter-spacing: -.025em; }
-.ipa  { font-size: 14px; font-weight: 500; color: var(--muted); }
 .pos  {
   padding: 2px var(--s2);
   border-radius: var(--r-full);
@@ -325,7 +326,13 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   font-weight: 800;
   color: var(--ink-2);
 }
-.word-ko { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin-top: calc(var(--s3) * -1); }
+
+/* 발음기호와 한글 발음을 나란히 */
+.word-sound { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2); }
+.ipa { font-size: 14px; font-weight: 500; color: var(--muted); }
+.kr  { font-size: 14.5px; font-weight: 700; color: var(--c); letter-spacing: -.01em; }
+
+.word-ko { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 
 .ex-box {
   display: flex;
@@ -980,9 +987,10 @@ function dailyCard(kind, text) {
 function renderDaily() {
   const k = pickToday(KNOWLEDGE);
   const w = pickToday(WORDS);
+  /* 카드는 한 줄뿐이라 뜻은 첫 번째 것만 보여준다 */
   $("daily").innerHTML =
     dailyCard("knowledge", k.q) +
-    dailyCard("word", `${w.word} · ${w.ko}`);
+    dailyCard("word", `${w.word}${w.kr ? ` [${w.kr}]` : ""} · ${w.ko.split(",")[0]}`);
 }
 
 function openDaily(kind) {
@@ -999,12 +1007,17 @@ function openDaily(kind) {
   } else {
     const w = pickToday(WORDS);
     $("dailyBody").innerHTML = `
-      <div class="word-head">
-        <span class="word">${esc(w.word)}</span>
-        <span class="ipa">${esc(w.ipa)}</span>
-        <span class="pos">${esc(w.pos)}</span>
+      <div class="word-block">
+        <div class="word-head">
+          <span class="word">${esc(w.word)}</span>
+          <span class="pos">${esc(w.pos)}</span>
+        </div>
+        <div class="word-sound">
+          <span class="ipa">${esc(w.ipa)}</span>
+          ${w.kr ? `<span class="kr">[${esc(w.kr)}]</span>` : ""}
+        </div>
+        <div class="word-ko">${esc(w.ko)}</div>
       </div>
-      <div class="word-ko">${esc(w.ko)}</div>
       <div class="ex-box">
         <div class="ex-en">${esc(w.ex)}</div>
         <div class="ex-ko">${esc(w.exKo)}</div>
