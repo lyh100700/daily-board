@@ -307,12 +307,19 @@ a.chrome-btn {
     </div>
   </section>
 
-  <!-- 폰에서 볼 때: 기기에 맞는 단계 -->
-  <section class="card" id="stepCard" hidden>
+  <!-- 폰에서 볼 때: 기기에 맞는 단계.
+       기본 내용을 미리 넣어 둔다. 자바스크립트가 어떤 이유로든 멈춰도
+       화면이 텅 비지 않고 최소한의 안내는 남아 있어야 한다. -->
+  <section class="card" id="stepCard">
     <h2 id="stepTitle">홈 화면에 추가하기</h2>
     <a class="install-btn chrome-btn" id="chromeBtn" hidden>크롬으로 다시 열기</a>
     <button class="install-btn" id="installBtn" hidden>지금 설치하기</button>
-    <ol class="steps" id="steps"></ol>
+    <ol class="steps" id="steps">
+      <li><div>오른쪽 위 <b>⋮</b> 메뉴를 누르세요</div></li>
+      <li><div><b>앱 설치</b>(크롬) 또는 <b>현재 페이지 추가</b>(삼성 인터넷)를 고르세요</div></li>
+      <li><div>삼성 인터넷은 이어서 <b>홈 화면</b>을 고릅니다</div></li>
+      <li><div><b>추가</b>를 누르면 아이콘이 생깁니다</div></li>
+    </ol>
     <p class="why" id="why" hidden></p>
   </section>
 
@@ -441,7 +448,12 @@ function kindOf() {
 }
 
 function paint() {
-  if (isStandalone()) { $("doneCard").hidden = false; return; }
+  if (isStandalone()) {
+    $("doneCard").hidden = false;
+    $("stepCard").hidden = true;
+    $("qrCard").hidden = true;
+    return;
+  }
 
   const kind = kindOf();
 
