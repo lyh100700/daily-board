@@ -45,8 +45,9 @@ index.html            앱 전체 (화면·기능·디자인이 이 안에 다 �
 install.html          기기에 맞는 설치 안내
 assets/qr.png         앱 주소 QR 코드
 assets/splash.jpg     앱을 열 때 잠깐 보이는 첫 화면
-data/knowledge.js     오늘의 상식 콘텐츠
-data/words.js         오늘의 단어 콘텐츠
+data/knowledge.js     일반상식 콘텐츠
+data/economy.js       경제상식 콘텐츠
+data/words.js         영단어 콘텐츠
 data/holidays.js      공휴일
 fonts/                Nunito 글꼴
 manifest.webmanifest  홈화면 설치 설정
@@ -64,13 +65,18 @@ icons/                앱 아이콘
 
 Nunito는 SIL Open Font License 1.1로 배포됩니다. 전문은 `fonts/Nunito-OFL.txt`에 있습니다.
 
-## 오늘의 상식 / 오늘의 단어
+## 일반상식 / 경제상식 / 영단어
 
-달력 아래 두 장의 카드로 뜹니다. 탭하면 자세한 내용이 열립니다.
+달력 아래 세 장의 카드로 뜹니다. 탭하면 자세한 내용이 열립니다.
 
-날짜에 따라 순서대로 넘어가므로 **새로고침해도 그날 것은 바뀌지 않습니다.**
-현재 상식 202개, 단어 212개가 들어 있습니다.
-팝업 아래 `다른 것 보기`로 무작위로 넘겨볼 수도 있습니다.
+**앱을 열 때마다 새로 뽑습니다.** 나갔다 들어오면 다른 것이 보입니다.
+팝업 아래 `다른 것 보기`를 누르면 그 자리에서 다른 것으로 넘어갑니다.
+
+| 종류 | 개수 | 파일 |
+|---|---|---|
+| 일반상식 | 251 | `data/knowledge.js` |
+| 경제상식 | 60 | `data/economy.js` |
+| 영단어 | 212 | `data/words.js` |
 
 **콘텐츠를 늘리려면** `data/` 안의 파일을 열어 배열 끝에 항목을 덧붙이면 됩니다.
 앱 코드(`index.html`)는 건드릴 필요가 없습니다.
