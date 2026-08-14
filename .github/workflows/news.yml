@@ -1,0 +1,51 @@
+# 경제뉴스 자동 갱신
+#
+# 하루 한 번 연합뉴스 경제 RSS 를 받아 data/news.js 를 새로 쓰고 커밋한다.
+# 커밋이 되면 GitHub Pages 가 알아서 다시 배포하므로, 앱을 열면 새 뉴스가 보인다.
+#
+# 서버도 API 키도 필요 없다. 아래 GITHUB_TOKEN 은 GitHub 이 이 작업에만
+# 쓰라고 그때그때 만들어 주는 것이라, 우리가 어디에 적어 둘 필요가 없다.
+#
+# 손으로 돌리려면: GitHub 저장소 → Actions → 경제뉴스 갱신 → Run workflow
+
+name: 경제뉴스 갱신
+
+on:
+  schedule:
+    # UTC 기준이다. 22:00 UTC = 다음날 07:00 한국시간
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+# 기본값은 읽기 전용이다. 커밋을 해야 하므로 쓰기를 준다
+permissions:
+  contents: write
+
+# 앞 작업이 아직 돌고 있으면 그게 끝날 때까지 기다린다 (푸시 충돌 방지)
+concurrency:
+  group: news
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 뉴스 받아오기
+        run: node scripts/build-news.mjs
+
+      - name: 바뀐 게 있을 때만 커밋
+        run: |
+          if git diff --quiet -- data/news.js; then
+            echo "제목이 그대로입니다. 커밋하지 않습니다."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/news.js
+          git commit -m "경제뉴스 갱신 ($(TZ=Asia/Seoul date '+%m월 %d일 %H:%M'))"
+          git push

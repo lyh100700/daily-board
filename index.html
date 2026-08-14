@@ -503,6 +503,27 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .shuffle:active { transform: translateY(0); }
 .shuffle svg { width: 17px; height: 17px; }
 
+/* 뉴스 원문으로 나가는 버튼. 앱 밖으로 나가는 링크라 '다른 것 보기' 와
+   생김새를 맞추되, 색을 채워서 눌러야 할 것처럼 보이게 했다. */
+.news-go {
+  align-self: flex-start;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s4);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--c) 88%, var(--surface));
+  color: #FFFFFF;
+  font-size: 14.5px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: filter .15s ease, transform .15s ease;
+}
+.news-go:hover  { filter: brightness(1.07); transform: translateY(-1px); }
+.news-go:active { transform: translateY(0); }
+.news-go svg    { width: 16px; height: 16px; }
+
 
 /* ─────────────────────────────────────────────
    6. 날짜 팝업 안의 일정 목록
@@ -1049,6 +1070,7 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 <script src="data/words.js"></script>
 <script src="data/economy.js"></script>
 <script src="data/holidays.js"></script>
+<script src="data/news.js"></script>
 
 <script>
 /* ─────────────────────────────────────────────
@@ -1535,11 +1557,15 @@ const DAILY = {
   knowledge: { label: "일반상식", color: "#A98BD4", shape: "special" },
   economy:   { label: "경제상식", color: "#D4A02C", shape: "life"    },
   word:      { label: "영단어",   color: "#4FB3AC", shape: "work"    },
+  news:      { label: "경제뉴스", color: "#5B8FCC", shape: "health"  },
 };
 
+/* 뉴스는 하루 한 번 GitHub 이 받아다 data/news.js 로 넣어 준다.
+   못 받아온 날이 있을 수 있어서, 없으면 빈 목록으로 두고 카드를 뺀다. */
 const listOf = kind =>
   kind === "knowledge" ? KNOWLEDGE :
-  kind === "economy"   ? ECONOMY   : WORDS;
+  kind === "economy"   ? ECONOMY   :
+  kind === "news"      ? (typeof NEWS === "undefined" ? [] : NEWS) : WORDS;
 
 /* 앱을 열 때마다 새로 뽑는다.
    날짜로 고정하면 하루 종일 같은 것만 보이는데,
@@ -1573,18 +1599,36 @@ function renderDaily() {
   const k = listOf("knowledge")[shown.knowledge];
   const e = listOf("economy")[shown.economy];
   const w = listOf("word")[shown.word];
+  const n = listOf("news")[shown.news];
 
   /* 카드는 한 줄뿐이라 단어 뜻은 첫 번째 것만 보여준다 */
   $("daily").innerHTML =
     dailyCard("knowledge", k.q) +
     dailyCard("economy",   e.q) +
-    dailyCard("word", `${w.word}${w.kr ? ` [${w.kr}]` : ""} · ${w.ko.split(",")[0]}`);
+    dailyCard("word", `${w.word}${w.kr ? ` [${w.kr}]` : ""} · ${w.ko.split(",")[0]}`) +
+    /* 뉴스를 못 받아온 날은 카드를 아예 뺀다. 빈 카드가 남는 것보다 낫다 */
+    (n ? dailyCard("news", n.q) : "");
 }
 
 /* 지금 팝업에서 보고 있는 종류 */
 let daily = { kind: "knowledge" };
 
 function bodyHTML(kind, item) {
+  /* 뉴스는 제목만 싣고 본문은 원문으로 보낸다. 옮겨 싣지 않는 이유는
+     scripts/build-news.mjs 주석에 적어 두었다. */
+  if (kind === "news") {
+    return `
+      <span class="tagline">연합뉴스 · ${esc(item.at)}</span>
+      <h3>${esc(item.q)}</h3>
+      <a class="news-go" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">
+        기사 읽기
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+        </svg>
+      </a>`;
+  }
+
   if (kind !== "word") {
     return `
       <span class="tagline">${esc(item.tag)}</span>
