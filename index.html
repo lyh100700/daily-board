@@ -250,6 +250,9 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   background: var(--surface);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-md);
+  overflow: hidden;                 /* 손가락을 따라 밀릴 때 밖으로 삐져나오지 않게 */
+  /* 세로 스크롤은 그대로 두고 가로 움직임만 우리가 받는다 */
+  touch-action: pan-y;
 }
 
 .dow, .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
@@ -274,6 +277,11 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   from { opacity: 0; transform: translateX(var(--slide, 0)); }
 }
 .grid.anim { animation: gridIn .22s cubic-bezier(.2,.7,.3,1); }
+
+/* 손가락을 떼면 제자리로 미끄러져 돌아온다 */
+.grid { transition: transform .22s cubic-bezier(.2,.7,.3,1); }
+/* 끌고 있는 동안에는 손가락을 그대로 따라와야 하므로 전환을 끈다 */
+.grid.dragging { transition: none; }
 
 .cell {
   position: relative;
@@ -1354,6 +1362,75 @@ $("grid").onclick = ev => {
 };
 
 $("dayClose").onclick = () => $("daySheet").close();
+
+/* ─────────────────────────────────────────────
+   달력 좌우로 밀어 달 넘기기
+
+   까다로운 점이 둘이다.
+   하나는 세로 스크롤을 막지 않는 것, 다른 하나는 날짜를 누르려다
+   손가락이 조금 밀렸을 때 엉뚱하게 달이 넘어가지 않는 것이다.
+   그래서 '가로로 뚜렷하게' 움직였을 때만 스와이프로 친다.
+   ───────────────────────────────────────────── */
+(function monthSwipe() {
+  const cal  = document.querySelector(".cal");
+  const grid = $("grid");
+
+  const START   = 12;   // 이만큼 움직여야 '밀기 시작'으로 본다
+  const CONFIRM = 55;   // 이만큼 넘겨야 달이 바뀐다
+  const RATIO   = 1.4;  // 가로가 세로보다 이 배수 이상이어야 가로 밀기
+
+  let sx = 0, sy = 0;
+  let tracking = false, sliding = false, swiped = false;
+
+  const reset = () => {
+    tracking = sliding = false;
+    grid.classList.remove("dragging");
+    grid.style.transform = "";
+  };
+
+  cal.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    sx = e.clientX; sy = e.clientY;
+    tracking = true; sliding = false;
+  });
+
+  window.addEventListener("pointermove", e => {
+    if (!tracking) return;
+    const dx = e.clientX - sx, dy = e.clientY - sy;
+
+    if (!sliding) {
+      if (Math.abs(dy) > START && Math.abs(dy) > Math.abs(dx)) { tracking = false; return; }  // 세로 스크롤이다
+      if (Math.abs(dx) < START || Math.abs(dx) < Math.abs(dy) * RATIO) return;
+      sliding = true;
+      grid.classList.add("dragging");
+    }
+
+    /* 끝으로 갈수록 덜 따라오게 해서 '한계가 있다'는 느낌을 준다 */
+    grid.style.transform = `translateX(${dx * 0.45}px)`;
+  }, { passive: true });
+
+  window.addEventListener("pointerup", e => {
+    if (!tracking) return;
+    const dx = e.clientX - sx;
+    const go = sliding && Math.abs(dx) >= CONFIRM;
+    reset();
+
+    if (go) {
+      swiped = true;                       // 뒤따라오는 클릭을 무시하기 위한 표시
+      setTimeout(() => { swiped = false; }, 350);
+      shiftMonth(dx < 0 ? 1 : -1);         // 왼쪽으로 밀면 다음 달
+    }
+  });
+
+  window.addEventListener("pointercancel", reset);
+
+  /* 밀어서 넘긴 직후의 클릭은 날짜 선택으로 치지 않는다 */
+  cal.addEventListener("click", e => {
+    if (!swiped) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+})();
 
 /* ─────────────────────────────────────────────
    삭제 — 확인 창으로 막지 않고, 지운 뒤 되돌릴 수 있게 한다.
