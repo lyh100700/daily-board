@@ -987,34 +987,11 @@ body.has-install .app { padding-bottom: 128px; }
 }
 :root[data-theme="dark"] .wx-stickers { opacity: .5; }
 
-/* 좌우 가장자리를 따라 내려가는 스티커 */
-.wx-edge {
-  position: absolute;
-  top: 52px; bottom: 16px;
-  width: 17px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  pointer-events: none;
-}
-.wx-edge-l { left: 1px; }
-.wx-edge-r { right: 1px; }
-.wx-edge span { display: block; width: 16px; height: 16px; }
-.wx-edge svg { width: 100%; height: 100%; display: block; }
-
 /* 좁은 폰에서는 스티커가 다닥다닥 붙어 지저분해진다. 몇 개를 뺀다 */
 @media (max-width: 355px) {
   .wx-stickers span:nth-child(even) { display: none; }
   .wx-stickers { justify-content: space-around; }
-  .wx-edge { display: none; }          /* 여기선 양옆에 여유가 없다 */
 }
-
-/* 어두운 화면에서는 장식이 주인공이 되지 않게 한 단 낮춘다 */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .wx-edge { opacity: .45; }
-}
-:root[data-theme="dark"] .wx-edge { opacity: .45; }
 
 /* 오늘 날씨 그림 — 강아지가 그날 날씨를 하고 있다.
    세로 높이만 정하고 가로는 그림 비율대로 둔다. 배너처럼 잘라 넣으면
@@ -2685,17 +2662,6 @@ const STICKER = {
     <path d="M11.1 15.9q1.05 .9 2.1 0" stroke="#B5A88F" stroke-width=".8" fill="none" stroke-linecap="round"/></svg>`,
 };
 
-/* 시트 좌우 가장자리를 따라 내려가는 스티커. 시안의 그것이다.
-   바깥 여백(20px) 안에 들어앉으므로 글이나 아이콘을 밀어내지 않는다. */
-const wxEdgeStickers = () => ["l", "r"].map(side => {
-  const off = side === "r" ? 1 : 0;
-  return `<div class="wx-edge wx-edge-${side}" aria-hidden="true">${
-    Array.from({ length: 7 }, (_, i) =>
-      `<span style="transform:rotate(${((i + off) % 3 - 1) * 16}deg)">${
-        (i + off) % 2 ? STICKER.cloud : STICKER.star}</span>`).join("")
-  }</div>`;
-}).join("");
-
 const wxStickers = () => `<div class="wx-stickers" aria-hidden="true">${
   Array.from({ length: 9 }, (_, i) =>
     `<span style="transform:rotate(${(i % 3 - 1) * 14}deg)">${i % 2 ? STICKER.cloud : STICKER.star}</span>`
@@ -2953,7 +2919,6 @@ function wxPaintSheet() {
 
   box.innerHTML = `
     ${wxCalTab()}
-    ${wxEdgeStickers()}
     <div class="wx">
       <div class="wx-now">
         <span class="wx-photo${photo.dark ? " is-dark" : ""}">
