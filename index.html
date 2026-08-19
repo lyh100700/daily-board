@@ -802,14 +802,17 @@ body.has-install .app { padding-bottom: 128px; }
 
 /* 헤더의 날씨 버튼 — 날씨를 못 받아온 동안에는 아예 없다.
    눌러도 아무 일 없는 버튼을 남기지 않는다 (읽어주기 버튼과 같은 규칙) */
-/* 달 이름과 '‹ ›' 사이 빈자리에 놓인다. .head 가 space-between 이라
-   양쪽이 밀어 준 만큼 가운데로 온다.
+/* '‹' 바로 왼쪽, 화살표 묶음(.nav) 안에 있다.
+   화살표는 오른쪽 끝에 고정이라, 여기 있으면 '오늘' 버튼이 떴다 사라져도
+   강아지가 제자리에 그대로 있는다. 헤더 바깥에 두면 그때마다 좌우로 흔들린다.
 
    크기는 44px 이 하한이다. 손가락으로 누르는 것이 그보다 작으면 잘 안 눌린다.
    강아지가 보여야 하는 자리이기도 해서 조금 더 키웠다. */
 .wx-btn {
   position: relative;
   flex: none;
+  /* 배지가 오른쪽으로 3px 삐져나오므로 화살표와 붙지 않게 띄운다 */
+  margin: 0 var(--s2) 0 var(--s1);
   width: 46px; height: 46px;
   display: grid; place-items: center;
   border-radius: var(--r-full);
@@ -1352,10 +1355,10 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       </div>
     </div>
 
-    <!-- '8월' 과 '‹ ›' 사이 빈자리. 날씨를 못 받아온 동안에는 숨어 있는다 -->
-    <button type="button" class="wx-btn" id="wxBtn" hidden aria-label="주간 예보 보기"></button>
     <div class="nav">
       <button class="today-btn" id="todayBtn" hidden>오늘</button>
+      <!-- '‹' 바로 왼쪽. 날씨를 못 받아온 동안에는 숨어 있는다 -->
+      <button type="button" class="wx-btn" id="wxBtn" hidden aria-label="주간 예보 보기"></button>
       <button class="nav-btn" id="prevBtn" aria-label="이전 달">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
