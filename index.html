@@ -841,12 +841,17 @@ body.has-install .app { padding-bottom: 128px; }
 .today-btn, .month, .year { white-space: nowrap; }
 
 /* ── 팝업 안쪽 ── */
-/* 화면이 짧은 폰에서는 내용이 넘친다. 상식 팝업과 같은 방식으로 안쪽만 굴린다 */
+/* 스크롤 없이 한 화면에 담는 것이 이 팝업의 목표다.
+   그래서 아래 값들은 '예쁘게' 가 아니라 '높이에 맞게' 정해져 있다.
+   무언가를 키우려면 다른 데서 그만큼을 빼야 한다.
+
+   max-height 는 그래도 남겨 둔다. 폰을 눕히면 화면이 아주 낮아지는데,
+   그때까지 한 화면에 넣으려 들면 글씨가 읽을 수 없게 작아진다. */
 .wx {
   display: flex;
   flex-direction: column;
-  gap: var(--s4);
-  max-height: 72svh;
+  gap: var(--s3);
+  max-height: 92svh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -856,17 +861,44 @@ body.has-install .app { padding-bottom: 128px; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--s5) var(--s3) var(--s4);
+  padding: var(--s3);
   background: var(--surface-2);
   border: 1.5px solid var(--line);
   border-radius: var(--r-lg);
 }
-.wx-now-icon { width: 88px; height: 88px; }
+
+/* 오늘 날씨 그림 — 강아지가 그날 날씨를 하고 있다.
+   세로 높이만 정하고 가로는 그림 비율대로 둔다. 배너처럼 잘라 넣으면
+   강아지의 머리나 다리가 잘려 나간다. */
+.wx-photo {
+  display: block;
+  height: 104px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  line-height: 0;
+}
+.wx-photo img { height: 100%; width: auto; display: block; }
+
+/* 그림을 못 받아왔을 때만 코드로 그린 아이콘이 대신 나온다.
+   깨진 그림 자리를 남기는 것보다 낫다 */
+.wx-photo-alt { display: none; width: 76px; height: 76px; }
+.wx-photo:not(:has(img)) { height: auto; }
+.wx-photo:not(:has(img)) .wx-photo-alt { display: block; }
+
+/* 어두운 화면에서는 밝은 그림이 그대로 있으면 눈이 부시다.
+   밝기를 낮추고 테두리를 둘러 '액자에 든 그림'처럼 보이게 한다.
+   테두리가 없으면 흰 종이가 허공에 떠 있는 것처럼 보인다. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wx-photo img { filter: brightness(.78) saturate(.94); }
+  :root:not([data-theme="light"]) .wx-photo { box-shadow: inset 0 0 0 1.5px var(--line); }
+}
+:root[data-theme="dark"] .wx-photo img { filter: brightness(.78) saturate(.94); }
+:root[data-theme="dark"] .wx-photo { box-shadow: inset 0 0 0 1.5px var(--line); }
 
 /* 온도는 이 팝업에서 가장 큰 글씨다. 제일 먼저 읽혀야 하는 값이라 그렇다 */
 .wx-now-temp {
-  margin-top: var(--s1);
-  font-size: 46px;
+  margin-top: 2px;
+  font-size: 42px;
   font-weight: 800;
   letter-spacing: -.04em;
   line-height: 1.05;
@@ -885,8 +917,8 @@ body.has-install .app { padding-bottom: 128px; }
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   width: 100%;
-  margin-top: var(--s4);
-  padding-top: var(--s3);
+  margin-top: var(--s3);
+  padding-top: var(--s2);
   border-top: 1.5px dashed var(--line);
 }
 .wx-part { display: flex; flex-direction: column; align-items: center; gap: 1px; }
@@ -903,7 +935,7 @@ body.has-install .app { padding-bottom: 128px; }
   align-items: center;
   gap: var(--s2);
   width: 100%;
-  padding: var(--s2) var(--s1);
+  padding: 7px var(--s1);
   border-radius: var(--r-md);
   text-align: left;
   transition: background .15s ease;
@@ -950,6 +982,20 @@ body.has-install .app { padding-bottom: 128px; }
    제목까지 넣으면 날씨가 안 읽히므로 점만 찍는다 */
 .wx-dots { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; }
 .wx-dots span { width: 6px; height: 6px; border-radius: var(--r-full); background: var(--c); }
+
+/* 화면이 짧은 폰(아이폰 SE 같은)에서만 한 번 더 조인다.
+   큰 폰까지 같이 줄이면 넓은 화면에서 옹색해 보인다. */
+@media (max-height: 739px) {
+  .wx { gap: var(--s2); }
+  .wx-now { padding: var(--s2) var(--s3); }
+  .wx-photo { height: 78px; }
+  .wx-now-temp { font-size: 34px; }
+  .wx-now-desc { font-size: 14px; }
+  .wx-parts { margin-top: var(--s2); }
+  .wx-part svg { width: 26px; height: 26px; }
+  .wx-day { padding: 4px var(--s1); }
+  .wx-day svg { width: 23px; height: 23px; }
+}
 
 /* ── 맨 아래 한 줄 ── */
 .wx-foot {
@@ -2240,6 +2286,22 @@ const WXFACE = (cx, cy, r) => `
     <ellipse cx="${cx - r * .68}" cy="${cy + r * .26}" rx="${r * .19}" ry="${r * .13}" fill="#E0736A" opacity=".32"/>
     <ellipse cx="${cx + r * .68}" cy="${cy + r * .26}" rx="${r * .19}" ry="${r * .13}" fill="#E0736A" opacity=".32"/>`;
 
+/* 오늘 칸에 쓰는 강아지 그림 (icons/weather).
+   그림은 넉 장뿐이라 없는 날씨는 가장 가까운 것으로 돌려쓴다.
+   안개는 흐림으로, 천둥번개는 비로 보낸다.
+   나중에 그림이 늘면 아래에 줄만 바꿔 주면 된다.
+
+   목록의 작은 아이콘과 아침·낮·저녁·밤에는 그림을 쓰지 않는다.
+   26px 로 줄면 강아지가 흰 덩어리로 뭉개져서, 코드로 그린 아이콘이 더 잘 읽힌다. */
+function wxPhoto(code) {
+  if (code <= 1) return "icons/weather/clear.jpg";                       // 맑음·대체로 맑음
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86)
+    return "icons/weather/snow.jpg";                                     // 눈
+  if (code === 2 || code === 3 || code === 45 || code === 48)
+    return "icons/weather/cloudy.jpg";                                   // 구름·흐림·안개
+  return "icons/weather/rain.jpg";                                       // 비·소나기·천둥번개
+}
+
 const WX_ART = {
   /* 맑음 */
   clear: f => `<svg viewBox="0 0 40 40" aria-hidden="true">
@@ -2521,7 +2583,10 @@ function wxPaintSheet() {
   box.innerHTML = `
     <div class="wx">
       <div class="wx-now">
-        <span class="wx-now-icon">${WX_ART[wxKind(code)](true)}</span>
+        <span class="wx-photo">
+          <img src="${wxPhoto(code)}" alt="" onerror="this.remove()">
+          <span class="wx-photo-alt">${WX_ART[wxKind(code)](true)}</span>
+        </span>
         <span class="wx-now-temp">${temp}°</span>
         <span class="wx-now-desc">${wxText(code)}</span>
         ${today ? `<span class="wx-now-sub">최고 ${today.max}° · 최저 ${today.min}°${
