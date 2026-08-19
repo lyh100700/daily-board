@@ -803,8 +803,9 @@ body.has-install .app { padding-bottom: 128px; }
 /* 헤더의 날씨 버튼 — 날씨를 못 받아온 동안에는 아예 없다.
    눌러도 아무 일 없는 버튼을 남기지 않는다 (읽어주기 버튼과 같은 규칙) */
 .wx-btn {
+  position: relative;
   flex: none;
-  width: 34px; height: 34px;
+  width: 36px; height: 36px;
   display: grid; place-items: center;
   border-radius: var(--r-full);
   background: var(--surface);
@@ -813,9 +814,38 @@ body.has-install .app { padding-bottom: 128px; }
   animation: wxPop .45s cubic-bezier(.2,.9,.3,1.3);
 }
 .wx-btn[hidden] { display: none; }
-.wx-btn:hover { transform: translateY(-1px); background: var(--surface-2); }
+.wx-btn:hover { transform: translateY(-1px); }
 .wx-btn:active { transform: translateY(0) scale(.93); }
-.wx-btn svg { width: 25px; height: 25px; }
+
+/* 오늘 날씨의 강아지 얼굴 */
+.wx-btn img {
+  width: 100%; height: 100%;
+  border-radius: var(--r-full);
+  object-fit: cover;                 /* object-position 은 그림마다 다르므로 인라인으로 준다 */
+  display: block;
+}
+
+/* 날씨 배지 — 강아지만으로는 무슨 날씨인지 안 보인다.
+   이게 있어야 주머니에서 꺼내 보는 순간 비가 오는지 알 수 있다. */
+.wx-btn-badge {
+  position: absolute;
+  right: -3px; bottom: -3px;
+  width: 18px; height: 18px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(90,70,30,.22);
+}
+.wx-btn-badge svg { width: 15px; height: 15px; }
+
+/* 그림을 못 받아왔으면 배지가 버튼 전체를 맡는다 */
+.wx-btn:not(:has(img)) .wx-btn-badge {
+  position: static;
+  width: 26px; height: 26px;
+  background: none;
+  box-shadow: none;
+}
+.wx-btn:not(:has(img)) .wx-btn-badge svg { width: 26px; height: 26px; }
 
 /* 처음 나타날 때 톡 튀어나온다. 조용히 생기면 생긴 줄 모른다 */
 @keyframes wxPop { from { opacity: 0; transform: scale(.4) rotate(-25deg); } }
@@ -2395,8 +2425,27 @@ const WXFACE = (cx, cy, r) => `
 
    목록의 작은 아이콘과 아침·낮·저녁·밤에는 그림을 쓰지 않는다.
    26px 로 줄면 강아지가 흰 덩어리로 뭉개져서, 코드로 그린 아이콘이 더 잘 읽힌다. */
+/* 헤더의 동그란 버튼은 이 그림을 동그랗게 잘라 쓴다.
+   그림이 모두 가로로 길어서 세로는 꽉 차고 좌우가 잘리는데, 강아지가 앉은
+   자리가 그림마다 달라 가운데를 자르면 엉덩이만 나오는 것이 생긴다.
+   그래서 어디를 중심으로 자를지 그림마다 적어 둔다 (가로%, 세로%).
+
+   얼굴만 확대하지 않는 이유: 흰 말티즈의 얼굴은 36px 로 줄이면 흰 덩어리다.
+   해·눈·번개가 함께 보이는 장면째로 담는 편이 무슨 날씨인지 훨씬 잘 읽힌다. */
+const WX_CROP_AT = {
+  clear:   "38% 40%",
+  cloudy:  "50% 34%",
+  rain:    "42% 44%",
+  snow:    "46% 42%",
+  night:   "30% 60%",
+  thunder: "46% 46%",
+  fog:     "56% 34%",
+};
+
 function wxPhoto(code, night) {
-  const p = (name, dark) => ({ src: `icons/weather/${name}.jpg`, dark: !!dark });
+  const p = (name, dark) => ({
+    src: `icons/weather/${name}.jpg`, dark: !!dark, face: WX_CROP_AT[name] || "50% 42%",
+  });
 
   if (code === 45 || code === 48) return p("fog", true);                 // 안개
   if (code >= 95)                 return p("thunder", true);             // 천둥번개
@@ -2640,7 +2689,13 @@ function wxPaintBtn() {
   const code = wx.now ? wx.now.code : today.code;
   const temp = wx.now ? wx.now.temp : today.max;
 
-  btn.innerHTML = WX_ART[wxKind(code, wxIsNight())]();
+  /* 강아지 얼굴을 동그랗게 잘라 넣고, 오른쪽 아래에 날씨 배지를 붙인다.
+     사진만 넣으면 34px 안에서 흰 강아지가 흰 덩어리가 되어 무슨 날씨인지
+     알 수 없다. 배지가 그것을 대신 말해 준다. */
+  const photo = wxPhoto(code, wxIsNight());
+  btn.innerHTML =
+    `<img src="${photo.src}" alt="" style="object-position:${photo.face}" onerror="this.remove()">` +
+    `<span class="wx-btn-badge">${WX_ART[wxKind(code, wxIsNight())]()}</span>`;
   btn.setAttribute("aria-label", `${WX_PLACE.name} 날씨 ${wxText(code)} ${temp}도, 주간 예보 보기`);
   btn.hidden = false;
 }
