@@ -1,7 +1,7 @@
 /* 서비스 워커 — 앱 파일을 폰에 저장해 두어 비행기 모드에서도 열리게 한다.
    파일을 고친 뒤에는 아래 VERSION 숫자를 올려야 새 버전이 반영된다. */
 
-const VERSION = "v31";
+const VERSION = "v32";
 const CACHE   = `calbee-${VERSION}`;
 
 const SHELL = [
@@ -71,6 +71,11 @@ self.addEventListener("activate", e => {
    이것이 있어야 위에서 말한 10분 지연 없이 그 자리에서 새 내용이 나온다. */
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+
+  /* 날씨처럼 남의 서버로 나가는 요청은 손대지 않고 그냥 보낸다.
+     여기서 가로채면 인터넷이 끊겼을 때 아래 catch 가 앱 화면(index.html)을
+     날씨 응답인 척 돌려주게 되고, 앱은 그걸 날씨로 읽으려다 엉뚱하게 실패한다. */
+  if (new URL(e.request.url).origin !== self.location.origin) return;
 
   e.respondWith(
     fetch(fresh(e.request, "no-cache"))
