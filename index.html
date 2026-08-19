@@ -1166,6 +1166,72 @@ body.has-install .app { padding-bottom: 128px; }
   .wx-stickers span { width: 16px; height: 16px; }
 }
 
+/* ── 지역 고르기 ── */
+
+/* 팝업 맨 아래에서 지역 이름을 누르면 열린다 */
+.place-open {
+  font: inherit;
+  font-weight: 700;
+  color: var(--ink-2);
+  border-bottom: 1.5px dotted var(--muted);
+  padding-bottom: 1px;
+}
+.place-open:hover { color: var(--ink); }
+
+.here-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  height: 48px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  border: 1.5px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  font-size: 14.5px;
+  font-weight: 700;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.here-btn:hover { transform: translateY(-1px); }
+.here-btn:disabled { opacity: .55; transform: none; }
+.here-btn svg { width: 18px; height: 18px; flex: none; }
+
+.places {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  max-height: 52svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.place-label {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .04em;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.place-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 손가락으로 누르는 것이라 높이를 40px 아래로 내리지 않는다 */
+.place {
+  height: 40px;
+  padding: 0 var(--s4);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-2);
+  transition: background .15s ease, border-color .15s ease;
+}
+.place:hover { background: var(--surface); border-color: var(--muted); }
+
+/* 지금 보고 있는 지역 */
+.place.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
 /* ── 맨 아래 한 줄 ── */
 .wx-foot {
   display: flex; align-items: center; justify-content: space-between;
@@ -1475,6 +1541,25 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       </button>
     </div>
     <div id="wxBody"></div>
+  </div>
+</dialog>
+
+<!-- 지역 고르기 -->
+<dialog class="sheet" id="placeSheet">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2>지역 고르기</h2>
+      <button type="button" class="icon-btn" id="placeClose" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <button type="button" class="here-btn" id="hereBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1116 0z"/><circle cx="12" cy="10" r="3"/>
+      </svg>
+      <span id="hereText">지금 내 위치로</span>
+    </button>
+    <div class="places" id="places"></div>
   </div>
 </dialog>
 
@@ -2477,18 +2562,60 @@ setTimeout(() => {
      (경제뉴스처럼 GitHub Actions 를 거쳐야 하는데, 날씨는 하루에도
       여러 번 바뀌므로 그 방식이 맞지 않는다)
 
-   왜 위치를 묻지 않나
-     개인 캘린더가 위치 권한을 물으면 사용자가 움찔한다. 얻는 것보다
-     잃는 것이 크다고 봐서 아래 WX_PLACE 한 곳으로 고정했다.
-     사는 곳이 다르면 이 좌표만 바꾸면 된다.
+   위치 권한
+     앱을 켤 때는 묻지 않는다. 개인 캘린더가 다짜고짜 위치를 물으면
+     사용자가 움찔한다. 대신 지역 고르기 창에 '지금 내 위치로' 버튼을 두어,
+     사용자가 스스로 누를 때만 묻는다. 평소에는 목록에서 고른 지역을 쓴다.
    ───────────────────────────────────────────── */
 
-/* 사는 곳. 다른 도시로 바꾸려면 이 세 줄만 고치면 된다.
-   좌표는 지도 앱에서 그 동네를 길게 눌러 보면 나온다 */
-const WX_PLACE = { name: "서울", lat: 37.5665, lon: 126.9780 };
+/* 고를 수 있는 지역 — 전국 40곳.
 
-const WX_KEY = "mallang-cal:weather";
-const WX_TTL = 60 * 60 * 1000;         // 한 시간 안쪽이면 다시 받지 않는다
+   왜 검색창이 아니라 목록인가
+     지오코딩(검색) 서비스에 한글 지명을 물으면 엉뚱한 곳이 나온다.
+     '부산' 은 경상북도의 작은 마을이, '강릉' 은 북한 황해북도가,
+     '제주' 는 아무것도 안 나온다. 시골 마을에도 같은 이름이 붙어 있어서다.
+     목록으로 두면 그런 일이 없고, 인터넷이 끊겨도 지역을 바꿀 수 있다.
+
+   좌표는 각 시청 자리이고, 받아온 고도로 전부 확인했다.
+   (자동으로 뽑으면 제주가 한라산 중턱 938m 로 잡혀 기온이 10도쯤 어긋난다) */
+const WX_PLACES = [
+  ["특별·광역시", [
+    ["서울",37.5665,126.978], ["부산",35.1796,129.0756], ["대구",35.8714,128.6014], ["인천",37.4563,126.7052], ["광주",35.1595,126.8526], ["대전",36.3504,127.3845], ["울산",35.5384,129.3114], ["세종",36.48,127.289]
+  ]],
+  ["경기", [
+    ["수원",37.2636,127.0286], ["성남",37.42,127.1265], ["고양",37.6584,126.832], ["용인",37.2411,127.1776], ["부천",37.5035,126.766], ["안산",37.3219,126.8309], ["평택",36.9921,127.1129], ["파주",37.7599,126.78]
+  ]],
+  ["강원", [
+    ["춘천",37.8813,127.73], ["원주",37.3422,127.9202], ["강릉",37.7519,128.8761], ["속초",38.207,128.5918]
+  ]],
+  ["충청", [
+    ["청주",36.6424,127.489], ["충주",36.991,127.926], ["천안",36.8151,127.1139], ["아산",36.7898,127.0018]
+  ]],
+  ["전라", [
+    ["전주",35.8242,127.148], ["군산",35.9676,126.7368], ["익산",35.9483,126.9576], ["목포",34.8118,126.3922], ["여수",34.7604,127.6622], ["순천",34.9506,127.4872]
+  ]],
+  ["경상", [
+    ["포항",36.019,129.3435], ["경주",35.8562,129.2247], ["구미",36.1196,128.3446], ["안동",36.5684,128.7294], ["창원",35.228,128.6811], ["진주",35.18,128.1076], ["김해",35.2285,128.8894], ["거제",34.8806,128.6211]
+  ]],
+  ["제주", [
+    ["제주",33.4996,126.5312], ["서귀포",33.2541,126.5601]
+  ]],
+];
+
+const WX_DEFAULT = { name: "서울", lat: 37.5665, lon: 126.9780 };
+
+const WX_KEY   = "mallang-cal:weather";
+const WX_PLACE_KEY = "mallang-cal:place";
+const WX_TTL   = 60 * 60 * 1000;       // 한 시간 안쪽이면 다시 받지 않는다
+
+/* 지금 보고 있는 지역. 고른 것은 이 기기에 저장된다 */
+let wxPlace = (() => {
+  try {
+    const p = JSON.parse(localStorage.getItem(WX_PLACE_KEY));
+    if (p && p.name && Number.isFinite(p.lat) && Number.isFinite(p.lon)) return p;
+  } catch {}
+  return WX_DEFAULT;
+})();
 
 /* ── 날씨 그림 — 캐릭터들과 같은 방식으로 코드로 그린다 ──
 
@@ -2692,12 +2819,15 @@ const wxColor = t =>
 
 let wx     = null;      // 마지막으로 받아 둔 예보
 let wxBusy = false;     // 지금 받아오는 중
+let wxGen  = 0;         // 지역을 바꿀 때마다 늘어난다 (늦게 온 응답을 걸러낸다)
 
 /* 저장해 둔 것을 꺼낸다. 오늘이 들어 있지 않은 예보는 이미 지난 것이라 버린다.
    (어제 받아 둔 것에는 오늘이 들어 있으므로, 비행기 모드에서도 쓸 수 있다) */
 function wxLoad() {
   try {
     const c = JSON.parse(localStorage.getItem(WX_KEY));
+    /* 지역을 바꿨는데 저장해 둔 옛 동네 예보를 꺼내 쓰면 안 된다 */
+    if (c?.lat !== wxPlace.lat || c?.lon !== wxPlace.lon) return null;
     if (c?.days?.some(d => d.date === TODAY)) return c;
   } catch {}
   return null;
@@ -2714,7 +2844,7 @@ const WX_TOMORROW = (() => {
 
 async function wxFetch() {
   const url = "https://api.open-meteo.com/v1/forecast"
-    + `?latitude=${WX_PLACE.lat}&longitude=${WX_PLACE.lon}`
+    + `?latitude=${wxPlace.lat}&longitude=${wxPlace.lon}`
     + "&current=weather_code,temperature_2m"
     + "&hourly=weather_code,temperature_2m"
     + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
@@ -2769,7 +2899,9 @@ async function wxFetch() {
 
   return {
     at:    Date.now(),
-    place: WX_PLACE.name,
+    place: wxPlace.name,
+    lat:   wxPlace.lat,
+    lon:   wxPlace.lon,
     days,
     parts,
     partsDate: TODAY,
@@ -2782,16 +2914,56 @@ async function wxFetch() {
 async function wxRefresh() {
   if (wxBusy) return;
   wxBusy = true;
+
+  /* 받아오는 도중에 지역을 바꾸면, 먼저 떠난 요청이 늦게 돌아와 옛 동네
+     날씨를 덮어쓴다. 떠날 때의 번호를 들고 있다가 그 사이 번호가 바뀌었으면
+     받아온 것을 그냥 버린다. */
+  const gen = wxGen;
   wxPaintSheet();                       // 팝업이 열려 있으면 '가져오는 중' 으로 바뀐다
   try {
-    wx = await wxFetch();
+    const got = await wxFetch();
+    if (gen !== wxGen) { wxBusy = false; return; }
+    wx = got;
     try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch {}
   } catch {
     /* 못 받아왔으면 저장해 둔 것을 그대로 쓴다. 그것마저 없을 때만 실패 화면이 뜬다 */
+    if (gen !== wxGen) { wxBusy = false; return; }
   }
   wxBusy = false;
   wxPaintBtn();
   wxPaintSheet();
+}
+
+/* 지역을 바꾼다. 저장해 둔 예보는 다른 동네 것이므로 버리고 새로 받는다.
+   버튼은 그대로 두었다가 새 예보가 오면 바뀐다. 잠깐 사라졌다 나타나면
+   눌렀는데 뭔가 잘못된 것처럼 보인다. */
+function wxSetPlace(p) {
+  wxPlace = p;
+  try { localStorage.setItem(WX_PLACE_KEY, JSON.stringify(p)); } catch {}
+  try { localStorage.removeItem(WX_KEY); } catch {}
+  wx = null;
+  wxGen++;        // 받아오는 중이던 옛 동네 응답은 이걸로 무효가 된다
+  wxBusy = false; // 그러니 기다리지 않고 바로 새로 떠난다
+
+  /* 여기서 wxPaintSheet 을 부르면 안 된다. 아직 wx 가 비어 있고 받아오기
+     전이라 '가져오지 못했어요' 가 한 번 번쩍인다. wxRefresh 가 첫 줄에서
+     '하늘을 살펴보는 중' 으로 그려 준다. */
+  wxRefresh();
+}
+
+/* 받은 좌표에 가장 가까운 도시 이름을 붙인다.
+   '현재 위치' 라고만 적어 두면 며칠 뒤에 열었을 때 그게 어디였는지 알 수 없다.
+   50km 넘게 떨어져 있으면 그 도시라고 부르지 않는다. */
+function wxNearest(lat, lon) {
+  let best = null, bestD = Infinity;
+  for (const [, list] of WX_PLACES) {
+    for (const [name, la, lo] of list) {
+      /* 우리 위도에서 경도 1도는 위도 1도의 8할쯤 되는 거리다 */
+      const d = (la - lat) ** 2 + ((lo - lon) * 0.8) ** 2;
+      if (d < bestD) { bestD = d; best = name; }
+    }
+  }
+  return bestD > 0.45 ** 2 ? "현재 위치" : best;
 }
 
 /* 밤 8시부터 새벽 6시까지는 해 대신 달을 그린다 */
@@ -2817,7 +2989,7 @@ function wxPaintBtn() {
   btn.innerHTML =
     `<img src="${photo.src}" alt="" style="object-position:${photo.face}" onerror="this.remove()">` +
     `<span class="wx-btn-badge">${WX_ART[wxKind(code, wxIsNight())]()}</span>`;
-  btn.setAttribute("aria-label", `${WX_PLACE.name} 날씨 ${wxText(code)} ${temp}도, 주간 예보 보기`);
+  btn.setAttribute("aria-label", `${wxPlace.name} 날씨 ${wxText(code)} ${temp}도, 주간 예보 보기`);
   btn.hidden = false;
 }
 
@@ -2937,7 +3109,7 @@ function wxPaintSheet() {
         ${rest.map(d => wxDayRow(d, lo, hi)).join("")}
       </div>
       <div class="wx-foot">
-        <span><b>${esc(wx.place)}</b> · ${stamp} 기준</span>
+        <span><button type="button" class="place-open" data-place-open>${esc(wxPlace.name)}</button> · ${stamp} 기준</span>
         <span>Open-Meteo</span>
       </div>
     </div>`;
@@ -2952,14 +3124,77 @@ function openWeather() {
 $("wxBtn").onclick   = openWeather;
 $("wxClose").onclick = () => $("wxSheet").close();
 
-/* 날짜 줄을 누르면 그 날 일정으로 넘어간다.
-   '금요일에 비가 오네' 다음에 오는 생각은 '그날 약속 있었나' 다 */
 $("wxBody").addEventListener("click", ev => {
+  /* 맨 아래 지역 이름 */
+  if (ev.target.closest("[data-place-open]")) return openPlaces();
+
+  /* 날짜 줄을 누르면 그 날 일정으로 넘어간다.
+     '금요일에 비가 오네' 다음에 오는 생각은 '그날 약속 있었나' 다 */
   const row = ev.target.closest("[data-wxdate]");
   if (!row) return;
   $("wxSheet").close();
   openDay(row.dataset.wxdate);
 });
+
+/* ── 지역 고르기 ── */
+
+function renderPlaces() {
+  $("places").innerHTML = WX_PLACES.map(([group, list]) => `
+    <div>
+      <div class="place-label">${group}</div>
+      <div class="place-row">${list.map(([name, lat, lon]) =>
+        `<button type="button" class="place${name === wxPlace.name ? " on" : ""}"
+                 data-name="${name}" data-lat="${lat}" data-lon="${lon}"
+                 ${name === wxPlace.name ? 'aria-current="true"' : ""}>${name}</button>`
+      ).join("")}</div>
+    </div>`).join("");
+}
+
+function openPlaces() {
+  renderPlaces();
+  $("hereBtn").disabled = false;
+  $("hereText").textContent = "지금 내 위치로";
+  /* 이 브라우저가 위치를 모르면 눌러도 아무 일 없는 버튼을 남기지 않는다 */
+  $("hereBtn").hidden = !navigator.geolocation;
+  $("placeSheet").showModal();
+
+  /* 고른 지역이 보이도록 그 자리로 스크롤해 둔다 */
+  const on = $("places").querySelector(".place.on");
+  if (on) on.scrollIntoView({ block: "center" });
+}
+
+$("placeClose").onclick = () => $("placeSheet").close();
+
+$("places").onclick = ev => {
+  const b = ev.target.closest(".place");
+  if (!b) return;
+  $("placeSheet").close();
+  wxSetPlace({ name: b.dataset.name, lat: +b.dataset.lat, lon: +b.dataset.lon });
+};
+
+/* 앱을 켤 때는 위치를 묻지 않는다. 이 버튼을 눌렀을 때만 묻는다 */
+$("hereBtn").onclick = () => {
+  const btn = $("hereBtn"), txt = $("hereText");
+  btn.disabled = true;
+  txt.textContent = "위치를 찾는 중…";
+
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      const lat = +coords.latitude.toFixed(4);
+      const lon = +coords.longitude.toFixed(4);
+      $("placeSheet").close();
+      wxSetPlace({ name: wxNearest(lat, lon), lat, lon });
+    },
+    err => {
+      btn.disabled = false;
+      /* 거절한 것과 못 찾은 것은 사용자가 할 일이 다르다 */
+      txt.textContent = err.code === err.PERMISSION_DENIED
+        ? "위치를 쓸 수 없어요. 아래에서 골라 주세요"
+        : "위치를 못 찾았어요. 다시 눌러 보세요";
+    },
+    { timeout: 10000, maximumAge: 10 * 60 * 1000 }
+  );
+};
 
 /* 앱이 뜨는 순간에는 달력이 먼저다. 날씨는 한 박자 늦게 조용히 받아온다.
    저장해 둔 것이 있으면 그것부터 띄워 두므로 기다림이 보이지 않는다 */
