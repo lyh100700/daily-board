@@ -987,23 +987,58 @@ body.has-install .app { padding-bottom: 128px; }
 }
 :root[data-theme="dark"] .wx-stickers { opacity: .5; }
 
+/* 좌우 가장자리를 따라 내려가는 스티커 */
+.wx-edge {
+  position: absolute;
+  top: 52px; bottom: 16px;
+  width: 17px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  pointer-events: none;
+}
+.wx-edge-l { left: 1px; }
+.wx-edge-r { right: 1px; }
+.wx-edge span { display: block; width: 16px; height: 16px; }
+.wx-edge svg { width: 100%; height: 100%; display: block; }
+
 /* 좁은 폰에서는 스티커가 다닥다닥 붙어 지저분해진다. 몇 개를 뺀다 */
 @media (max-width: 355px) {
   .wx-stickers span:nth-child(even) { display: none; }
   .wx-stickers { justify-content: space-around; }
+  .wx-edge { display: none; }          /* 여기선 양옆에 여유가 없다 */
 }
+
+/* 어두운 화면에서는 장식이 주인공이 되지 않게 한 단 낮춘다 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .wx-edge { opacity: .45; }
+}
+:root[data-theme="dark"] .wx-edge { opacity: .45; }
 
 /* 오늘 날씨 그림 — 강아지가 그날 날씨를 하고 있다.
    세로 높이만 정하고 가로는 그림 비율대로 둔다. 배너처럼 잘라 넣으면
-   강아지의 머리나 다리가 잘려 나간다. */
+   강아지의 머리나 다리가 잘려 나간다.
+
+   테두리를 두지 않고 가장자리를 부드럽게 지운다.
+   네모난 액자에 넣으면 '사진을 붙였다' 로 보이는데, 가장자리를 흐리면
+   그려 넣은 것처럼 배경에 녹아든다. 시안의 강아지가 그렇게 떠 있다.
+   그림마다 배경색이 조금씩 달라도 경계가 안 보이는 것도 덤이다. */
 .wx-photo {
   display: block;
   height: 104px;
-  border-radius: var(--r-md);
-  overflow: hidden;
   line-height: 0;
+  /* 좌우를, 안쪽 img 가 위아래를 지운다. 둘을 겹쳐야 네 변이 모두 흐려진다.
+     타원 하나로 지우면 강아지의 머리와 다리까지 같이 지워지고,
+     타원을 키우면 위아래가 상자 밖에서 끝나 딱딱한 선이 남는다. */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 9%, #000 91%, transparent 100%);
 }
-.wx-photo img { height: 100%; width: auto; display: block; }
+.wx-photo img {
+  height: 100%; width: auto; display: block;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 11%, #000 89%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 11%, #000 89%, transparent 100%);
+}
 
 /* 그림을 못 받아왔을 때만 코드로 그린 아이콘이 대신 나온다.
    깨진 그림 자리를 남기는 것보다 낫다 */
@@ -1016,12 +1051,12 @@ body.has-install .app { padding-bottom: 128px; }
    테두리가 없으면 흰 종이가 허공에 떠 있는 것처럼 보인다. */
 /* .is-dark 는 그림 자체가 어두운 것들이다 (밤·천둥번개·안개).
    밝은 그림만 한 단 낮춘다. 원래 어두운 그림까지 낮추면 시커멓게 뭉개진다. */
+/* 액자를 없앤 뒤로는 테두리를 두르지 않는다. 가장자리가 이미 흐려서
+   흰 종이가 허공에 떠 있어 보이지 않는다. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .wx-photo:not(.is-dark) img { filter: brightness(.78) saturate(.94); }
-  :root:not([data-theme="light"]) .wx-photo { box-shadow: inset 0 0 0 1.5px var(--line); }
+  :root:not([data-theme="light"]) .wx-photo:not(.is-dark) img { filter: brightness(.68) saturate(.9); }
 }
-:root[data-theme="dark"] .wx-photo:not(.is-dark) img { filter: brightness(.78) saturate(.94); }
-:root[data-theme="dark"] .wx-photo { box-shadow: inset 0 0 0 1.5px var(--line); }
+:root[data-theme="dark"] .wx-photo:not(.is-dark) img { filter: brightness(.68) saturate(.9); }
 
 /* 온도는 이 팝업에서 가장 큰 글씨다. 제일 먼저 읽혀야 하는 값이라 그렇다 */
 .wx-now-temp {
@@ -2650,6 +2685,17 @@ const STICKER = {
     <path d="M11.1 15.9q1.05 .9 2.1 0" stroke="#B5A88F" stroke-width=".8" fill="none" stroke-linecap="round"/></svg>`,
 };
 
+/* 시트 좌우 가장자리를 따라 내려가는 스티커. 시안의 그것이다.
+   바깥 여백(20px) 안에 들어앉으므로 글이나 아이콘을 밀어내지 않는다. */
+const wxEdgeStickers = () => ["l", "r"].map(side => {
+  const off = side === "r" ? 1 : 0;
+  return `<div class="wx-edge wx-edge-${side}" aria-hidden="true">${
+    Array.from({ length: 7 }, (_, i) =>
+      `<span style="transform:rotate(${((i + off) % 3 - 1) * 16}deg)">${
+        (i + off) % 2 ? STICKER.cloud : STICKER.star}</span>`).join("")
+  }</div>`;
+}).join("");
+
 const wxStickers = () => `<div class="wx-stickers" aria-hidden="true">${
   Array.from({ length: 9 }, (_, i) =>
     `<span style="transform:rotate(${(i % 3 - 1) * 14}deg)">${i % 2 ? STICKER.cloud : STICKER.star}</span>`
@@ -2907,6 +2953,7 @@ function wxPaintSheet() {
 
   box.innerHTML = `
     ${wxCalTab()}
+    ${wxEdgeStickers()}
     <div class="wx">
       <div class="wx-now">
         <span class="wx-photo${photo.dark ? " is-dark" : ""}">
