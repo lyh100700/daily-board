@@ -1057,11 +1057,24 @@ body.has-install .app { padding-bottom: 128px; }
 /* ── 앞으로 며칠 ── */
 .wx-days { display: flex; flex-direction: column; gap: 1px; margin-top: 6px; }
 
-.wx-day {
+/* 줄 하나의 칸 나누기. 머리글도 같은 값을 써야 '오전/오후' 글자가
+   아이콘 바로 위에 온다. 한쪽만 고치면 어긋난다. */
+.wx-day, .wx-days-head {
   display: grid;
-  grid-template-columns: 46px 30px 30px minmax(0, 1fr) 22px;
-  align-items: center;
+  grid-template-columns: 42px 24px 24px 28px minmax(0, 1fr) 18px;
   gap: var(--s2);
+}
+
+.wx-days-head {
+  padding: 0 var(--s1) 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.wx-day {
+  align-items: center;
   width: 100%;
   padding: 7px var(--s1);
   border-radius: var(--r-md);
@@ -1076,7 +1089,7 @@ body.has-install .app { padding-bottom: 128px; }
 .wx-when.sat { color: var(--sat); }
 .wx-when small { font-weight: 600; color: var(--muted); font-size: 12px; }
 
-.wx-day svg { width: 26px; height: 26px; }
+.wx-day svg { width: 24px; height: 24px; }
 
 /* 비 올 확률 — 0%인 날은 아예 비운다. 숫자가 줄줄이 0이면 눈만 어지럽다 */
 .wx-pop {
@@ -1133,7 +1146,8 @@ body.has-install .app { padding-bottom: 128px; }
   .wx-parts { margin-top: var(--s2); }
   .wx-part svg { width: 26px; height: 26px; }
   .wx-day { padding: 4px var(--s1); }
-  .wx-day svg { width: 23px; height: 23px; }
+  .wx-day svg { width: 21px; height: 21px; }
+  .wx-day, .wx-days-head { grid-template-columns: 40px 21px 21px 26px minmax(0, 1fr) 16px; gap: 6px; }
   .wx-cal { top: -26px; width: 70px; }
   .wx-cal-day { font-size: 20px; }
   .wx-stickers { bottom: -7px; }
@@ -2701,9 +2715,31 @@ async function wxFetch() {
   const D = j.daily;
   if (!D?.time?.length) throw new Error("예보가 비어 있습니다");
 
+  const H = j.hourly || {};
+
+  /* 하루를 오전(00~11)·오후(12~23)로 갈라 각각 그 반나절에 가장 심했던 날씨를 낸다.
+
+     일별 코드 하나만 쓰면 오후에 잠깐 친 천둥 때문에 하루 종일 천둥번개로
+     표시된다. 실제로는 오전엔 이슬비만 오는 날인데도 그렇다.
+     일주일에 번개가 사흘 뜨면 예보를 믿지 않게 되고, 정작 진짜 뇌우 날의
+     경고가 묻힌다. 반나절씩 나누면 그런 일이 없다. */
+  const halfCode = (date, from, to) => {
+    let worst = null;
+    (H.time || []).forEach((t, i) => {
+      if (!t.startsWith(date)) return;
+      const h = +t.slice(11, 13);
+      if (h < from || h > to) return;
+      const c = H.weather_code[i];
+      if (Number.isFinite(c) && (worst === null || c > worst)) worst = c;
+    });
+    return worst;
+  };
+
   const days = D.time.map((date, i) => ({
     date,
     code: D.weather_code[i],
+    am:   halfCode(date, 0, 11),
+    pm:   halfCode(date, 12, 23),
     max:  Math.round(D.temperature_2m_max[i]),
     min:  Math.round(D.temperature_2m_min[i]),
     pop:  D.precipitation_probability_max[i] ?? 0,
@@ -2713,7 +2749,6 @@ async function wxFetch() {
 
   /* 오늘 하루의 네 토막. 이미 지난 시간대도 그대로 두는 편이 낫다.
      저녁에 열었을 때 '아침엔 맑았지' 하고 하루를 되짚게 된다 */
-  const H = j.hourly || {};
   const parts = WX_PARTS.map(([label, hm, night]) => {
     const i = (H.time || []).indexOf(`${TODAY}T${hm}`);
     return i < 0 ? null
@@ -2803,11 +2838,16 @@ function wxDayRow(d, lo, hi) {
   const dots = eventsOn(d.date).slice(0, 4)
     .map(e => `<span style="--c:${catOf(e.cat).color}"></span>`).join("");
 
+  /* 시간별 예보를 못 받은 경우에는 하루 대표 날씨를 양쪽에 똑같이 쓴다 */
+  const am = d.am ?? d.code;
+  const pm = d.pm ?? d.code;
+
   return `
     <button class="wx-day" data-wxdate="${d.date}"
-            aria-label="${m}월 ${dd}일 ${wxText(d.code)}, 최저 ${d.min}도 최고 ${d.max}도">
+            aria-label="${m}월 ${dd}일, 오전 ${wxText(am)}, 오후 ${wxText(pm)}, 최저 ${d.min}도 최고 ${d.max}도">
       <span class="wx-when${holi || w === 0 ? " sun" : w === 6 ? " sat" : ""}">${when}</span>
-      ${WX_ART[wxKind(d.code)]()}
+      ${WX_ART[wxKind(am)]()}
+      ${WX_ART[wxKind(pm)]()}
       <span class="wx-pop">${d.pop >= 20 ? d.pop + "%" : ""}</span>
       <span class="wx-range">
         <span class="wx-lo">${d.min}°</span>
@@ -2880,7 +2920,10 @@ function wxPaintSheet() {
         ${parts}
         ${wxStickers()}
       </div>
-      <div class="wx-days">${rest.map(d => wxDayRow(d, lo, hi)).join("")}</div>
+      <div class="wx-days">
+        <div class="wx-days-head" aria-hidden="true"><span></span><span>오전</span><span>오후</span></div>
+        ${rest.map(d => wxDayRow(d, lo, hi)).join("")}
+      </div>
       <div class="wx-foot">
         <span><b>${esc(wx.place)}</b> · ${stamp} 기준</span>
         <span>Open-Meteo</span>
