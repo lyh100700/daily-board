@@ -1631,6 +1631,7 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 <script src="data/economy.js"></script>
 <script src="data/holidays.js"></script>
 <script src="data/news.js"></script>
+<script src="data/kma.js"></script>
 
 <script>
 /* ─────────────────────────────────────────────
@@ -2608,6 +2609,44 @@ const WX_KEY   = "mallang-cal:weather";
 const WX_PLACE_KEY = "mallang-cal:place";
 const WX_TTL   = 60 * 60 * 1000;       // 한 시간 안쪽이면 다시 받지 않는다
 
+/* ── 기상청 자료 갈아 끼우기 ──
+
+   오늘·내일·모레는 기상청 예보로 바꾼다. 사람이 실제로 신경 쓰는 사흘이고,
+   뉴스·네이버가 쓰는 것과 같아야 앱을 믿게 된다.
+   나흘 뒤부터는 기상청 단기예보에 없어서 Open-Meteo 가 그대로 맡는다.
+
+   data/kma.js 는 GitHub Actions 가 하루 네 번 만들어 둔 파일이다.
+   그 주소는 기상청이 말없이 바꿀 수 있으므로, 자료가 낡으면 쓰지 않고
+   Open-Meteo 로 조용히 돌아간다. 틀린 날씨보다 조금 덜 정확한 날씨가 낫다. */
+const KMA_MAX_AGE = 12 * 60 * 60 * 1000;
+
+/* 기상청 하늘상태를 앱이 쓰는 날씨 번호로. 아이콘·그림이 이 번호를 본다 */
+const KMA_CODE = { clear: 0, partly: 2, cloudy: 3, rain: 63, snow: 73 };
+
+function kmaFresh() {
+  if (typeof KMA === "undefined" || !KMA.at) return false;
+  const a = KMA.at;                       // "202608200800"
+  const t = new Date(+a.slice(0,4), +a.slice(4,6) - 1, +a.slice(6,8), +a.slice(8,10)).getTime();
+  return Number.isFinite(t) && Date.now() - t < KMA_MAX_AGE;
+}
+
+/* 지금 보고 있는 지역의 그 날짜 예보. 없으면 null */
+function kmaOn(date) {
+  if (!kmaFresh()) return null;
+  const list = KMA.place?.[wxPlace.name];
+  return list?.find(d => d.date === date) || null;
+}
+
+/* 세 시간 간격 값 중 원하는 시각에 가장 가까운 것. 두 시간 넘게 벌어지면 안 쓴다 */
+function kmaHour(k, hour) {
+  let best = null, gap = 99;
+  for (const [h, t, kind] of k?.h || []) {
+    const d = Math.abs(h - hour);
+    if (d < gap) { gap = d; best = { code: KMA_CODE[kind], temp: t }; }
+  }
+  return gap <= 2 ? best : null;
+}
+
 /* 지금 보고 있는 지역. 고른 것은 이 기기에 저장된다 */
 let wxPlace = (() => {
   try {
@@ -2970,7 +3009,43 @@ function wxNearest(lat, lon) {
 const wxIsNight = () => { const h = new Date().getHours(); return h >= 20 || h < 6; };
 
 const wxStale = () => !wx || Date.now() - wx.at > WX_TTL;
-const wxToday = () => wx?.days.find(d => d.date === TODAY) || null;
+
+/* 화면에 그릴 이레치. 앞 사흘은 기상청 값으로 갈아 끼운다.
+   wx 자체는 손대지 않는다. 저장해 둔 것에 섞어 넣으면 나중에 어느 쪽 자료인지
+   알 수 없게 되고, 기상청 파일이 새로 와도 옛 값이 남는다. */
+function wxDays() {
+  return (wx?.days || []).map(d => {
+    const k = kmaOn(d.date);
+    if (!k) return d;
+    return {
+      ...d,
+      min: k.min, max: k.max, pop: k.pop,
+      am: k.am ? KMA_CODE[k.am] : d.am,
+      pm: k.pm ? KMA_CODE[k.pm] : d.pm,
+      kma: true,
+    };
+  });
+}
+
+const wxToday = () => wxDays().find(d => d.date === TODAY) || null;
+
+/* 지금 하늘. 기상청 값이 있으면 그것을 쓴다.
+   현재 기온만 다른 데서 가져오면 '24도인데 최고 31도' 처럼 앞뒤가 안 맞는다 */
+function wxNow() {
+  const got = kmaHour(kmaOn(TODAY), new Date().getHours());
+  return got || wx?.now || null;
+}
+
+/* 아침·낮·저녁·밤. 기상청에 그 시각이 없으면(이미 지난 오전 등) 있던 값을 쓴다 */
+function wxPartsNow() {
+  const k = kmaOn(TODAY);
+  if (!k) return wx?.parts || [];
+  return WX_PARTS.map(([label, hm, night]) => {
+    const got = kmaHour(k, +hm.slice(0, 2));
+    if (got) return { label, night: !!night, code: got.code, temp: got.temp };
+    return (wx?.parts || []).find(p => p.label === label) || null;
+  }).filter(Boolean);
+}
 
 /* ── 헤더 버튼 ── */
 function wxPaintBtn() {
@@ -2979,8 +3054,9 @@ function wxPaintBtn() {
   if (!today) { btn.hidden = true; return; }
 
   /* 지금 하늘이 어떤지가 그날의 대표 날씨보다 궁금하다. 있으면 현재값을 쓴다 */
-  const code = wx.now ? wx.now.code : today.code;
-  const temp = wx.now ? wx.now.temp : today.max;
+  const now  = wxNow();
+  const code = now ? now.code : today.code;
+  const temp = now ? now.temp : today.max;
 
   /* 강아지 얼굴을 동그랗게 잘라 넣고, 오른쪽 아래에 날씨 배지를 붙인다.
      사진만 넣으면 34px 안에서 흰 강아지가 흰 덩어리가 되어 무슨 날씨인지
@@ -3065,8 +3141,9 @@ function wxPaintSheet() {
     return;
   }
 
-  const today = wxToday();
-  const rest  = wx.days.filter(d => d.date > TODAY);
+  const days  = wxDays();
+  const today = days.find(d => d.date === TODAY) || null;
+  const rest  = days.filter(d => d.date > TODAY);
 
   /* 막대의 눈금은 오늘까지 넣어서 잡는다. 오늘만 유난히 덥던 주에
      내일부터의 막대가 통째로 왼쪽에 몰리는 것을 막는다 */
@@ -3074,12 +3151,14 @@ function wxPaintSheet() {
   const lo = Math.min(...scale.map(d => d.min));
   const hi = Math.max(...scale.map(d => d.max));
 
-  const code = wx.now ? wx.now.code : today.code;
-  const temp = wx.now ? wx.now.temp : today.max;
+  const now   = wxNow();
+  const code  = now ? now.code : today.code;
+  const temp  = now ? now.temp : today.max;
   const photo = wxPhoto(code, wxIsNight());
 
-  const parts = wx.partsDate === TODAY && wx.parts.length
-    ? `<div class="wx-parts">${wx.parts.map(p => `
+  const slots = wxPartsNow();
+  const parts = slots.length
+    ? `<div class="wx-parts">${slots.map(p => `
          <div class="wx-part">
            <span class="wx-part-when">${p.label}</span>
            ${WX_ART[wxKind(p.code, p.night)]()}
@@ -3110,7 +3189,7 @@ function wxPaintSheet() {
       </div>
       <div class="wx-foot">
         <span><button type="button" class="place-open" data-place-open>${esc(wxPlace.name)}</button> · ${stamp} 기준</span>
-        <span>Open-Meteo</span>
+        <span>${days.some(d => d.kma) ? "기상청 · Open-Meteo" : "Open-Meteo"}</span>
       </div>
     </div>`;
 }
