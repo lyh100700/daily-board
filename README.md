@@ -78,8 +78,8 @@ Nunito는 SIL Open Font License 1.1로 배포됩니다. 전문은 `fonts/Nunito-
 
 | 종류 | 개수 | 파일 |
 |---|---|---|
-| 일반상식 | 251 | `data/knowledge.js` |
-| 경제상식 | 60 | `data/economy.js` |
+| 일반상식 | 259 | `data/knowledge.js` |
+| 경제상식 | 116 | `data/economy.js` |
 | 영단어 | 190 | `data/words.js` |
 
 **콘텐츠를 늘리려면** `data/` 안의 파일을 열어 배열 끝에 항목을 덧붙이면 됩니다.
