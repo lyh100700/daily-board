@@ -3,8 +3,8 @@
 # 하루 네 번 기상청 단기예보를 받아 data/kma.js 를 새로 쓰고 커밋한다.
 # 커밋이 되면 GitHub Pages 가 알아서 다시 배포하므로, 앱을 열면 새 예보가 보인다.
 #
-# 인증키는 저장소 Settings → Secrets and variables → Actions 에 KMA_KEY 로 넣어 둔다.
-# 소스에도 기록에도 남지 않는다.
+# 인증키가 필요 없다. 기상청이 자기 날씨 위젯에 쓰는 주소를 그대로 부른다.
+# 브라우저에서는 CORS 때문에 못 부르지만, 여기는 서버라 상관없다.
 #
 # 손으로 돌리려면: GitHub 저장소 → Actions → 기상청 날씨 갱신 → Run workflow
 
@@ -41,8 +41,6 @@ jobs:
           node-version: "20"
 
       - name: 날씨 받아오기
-        env:
-          KMA_KEY: ${{ secrets.KMA_KEY }}
         run: node scripts/build-kma.mjs
 
       - name: 바뀐 게 있을 때만 커밋
