@@ -1,0 +1,58 @@
+# 기상청 날씨 자동 갱신
+#
+# 하루 네 번 기상청 단기예보를 받아 data/kma.js 를 새로 쓰고 커밋한다.
+# 커밋이 되면 GitHub Pages 가 알아서 다시 배포하므로, 앱을 열면 새 예보가 보인다.
+#
+# 인증키는 저장소 Settings → Secrets and variables → Actions 에 KMA_KEY 로 넣어 둔다.
+# 소스에도 기록에도 남지 않는다.
+#
+# 손으로 돌리려면: GitHub 저장소 → Actions → 기상청 날씨 갱신 → Run workflow
+
+name: 기상청 날씨 갱신
+
+on:
+  schedule:
+    # cron 은 UTC 기준이라 한국시간에서 9시간을 뺀 값을 적는다.
+    # 기상청은 하루 여덟 번(02·05·08·11·14·17·20·23시) 발표하는데,
+    # 사람이 날씨를 확인하는 시간에 맞춰 그중 네 번만 받아 온다.
+    - cron: "0 21 * * *"   # 06:00 KST — 출근 전, 오늘 옷차림
+    - cron: "0 0 * * *"    # 09:00 KST — 오전
+    - cron: "0 6 * * *"    # 15:00 KST — 오후 소나기 반영
+    - cron: "0 12 * * *"   # 21:00 KST — 내일 준비
+  workflow_dispatch:
+
+# 기본값은 읽기 전용이다. 커밋을 해야 하므로 쓰기를 준다
+permissions:
+  contents: write
+
+# 앞 작업이 아직 돌고 있으면 그게 끝날 때까지 기다린다 (푸시 충돌 방지)
+concurrency:
+  group: kma
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 날씨 받아오기
+        env:
+          KMA_KEY: ${{ secrets.KMA_KEY }}
+        run: node scripts/build-kma.mjs
+
+      - name: 바뀐 게 있을 때만 커밋
+        run: |
+          if git diff --quiet -- data/kma.js; then
+            echo "예보가 그대로입니다. 커밋하지 않습니다."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/kma.js
+          git commit -m "날씨 갱신 ($(TZ=Asia/Seoul date '+%m월 %d일 %H:%M'))"
+          git push
