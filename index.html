@@ -572,6 +572,15 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .day-title h2.holiday { color: var(--sun); }
 .day-title .count { font-size: 13px; color: var(--muted); font-weight: 600; flex: none; }
 
+/* 음력. 눈에 먼저 들어오면 안 되므로 양력보다 작고 연하게 둔다 */
+.day-title .lunar {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--muted) 70%, transparent);
+  letter-spacing: -.01em;
+}
+
 .holiday-tag {
   flex: none;
   padding: 2px var(--s2);
@@ -1516,6 +1525,7 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
     <div class="sheet-head">
       <div class="day-title">
         <h2 id="dayLabel">8월 13일 목요일</h2>
+        <span class="lunar" id="dayLunar" hidden></span>
         <span class="holiday-tag" id="dayHoliday" hidden></span>
         <span class="count" id="dayCount"></span>
       </div>
@@ -1770,6 +1780,49 @@ function holidayOn(date) {
   return listed ? listed[1] : null;
 }
 
+/* ─────────────────────────────────────────────
+   음력
+
+   표를 직접 넣지 않는다. 폰과 컴퓨터에 이미 들어 있는 달력 데이터
+   (ICU 의 음력 달력) 를 그대로 쓴다. 음력은 달의 삭망으로 정해지는 값이라
+   손으로 어림하면 반드시 틀리는데, 기기에 든 표는 천문 계산으로 만든 것이다.
+
+   실제로 설날·추석·부처님오신날로 맞춰 보았고 윤달(윤2월 같은)도 바르게 나온다.
+   다만 이 표는 중국 표준시로 계산되어 있어, 삭이 자정 언저리에 드는 아주 드문
+   해에는 우리 음력과 하루가 어긋날 수 있다. 참고로 보여주는 값이라 그냥 둔다.
+
+   음력 달력을 모르는 낡은 브라우저도 있어서, 아는 날짜(2025년 설날)로
+   한 번 시험해 보고 틀리면 아예 쓰지 않는다. 틀린 날짜를 보여주느니 안 보여주는
+   편이 낫다. ───────────────────────────────────────────── */
+const LUNAR = (() => {
+  let fmt;
+  try {
+    fmt = new Intl.DateTimeFormat("ko-KR-u-ca-chinese", {
+      timeZone: "UTC", month: "numeric", day: "numeric",
+    });
+  } catch { return null; }
+
+  /* 날짜가 시간대 때문에 하루 밀리지 않도록 UTC 자정으로 못 박아 넘긴다 */
+  const read = (y, m, d) => {
+    const parts = fmt.formatToParts(new Date(Date.UTC(y, m - 1, d)))
+      .reduce((o, x) => (o[x.type] = x.value, o), {});
+    return parts.month && parts.day ? parts : null;
+  };
+
+  const check = read(2025, 1, 29);                 // 2025년 설날 = 음력 1월 1일
+  if (!check || check.month !== "1" || check.day !== "1") return null;
+
+  return read;
+})();
+
+/* "음력 7월 11일". 윤달이면 ICU 가 달 이름을 '윤7' 로 준다 */
+function lunarOn(y, m, d) {
+  const v = LUNAR?.(y, m, d);
+  if (!v) return "";
+  const leap = v.month.startsWith("윤");
+  return `음력 ${leap ? `윤${v.month.slice(1)}` : v.month}월 ${v.day}일`;
+}
+
 function renderMonth() {
   $("year").textContent       = `${view.y}년`;
   $("monthLabel").textContent = `${view.m}월`;
@@ -1816,8 +1869,12 @@ function renderDaySheet() {
 
   const holiday = holidayOn(picked);
 
+  const lunar = lunarOn(y, m, d);
+
   $("dayLabel").textContent = `${m}월 ${d}일 ${WD[w]}요일`;
   $("dayLabel").className   = holiday || w === 0 ? "holiday" : "";
+  $("dayLunar").textContent = lunar;
+  $("dayLunar").hidden      = !lunar;
   $("dayHoliday").textContent = holiday || "";
   $("dayHoliday").hidden      = !holiday;
   $("dayCount").textContent = list.length ? `${list.length}개` : "";
