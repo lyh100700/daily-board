@@ -1,7 +1,7 @@
 /* 서비스 워커 — 앱 파일을 폰에 저장해 두어 비행기 모드에서도 열리게 한다.
    파일을 고친 뒤에는 아래 VERSION 숫자를 올려야 새 버전이 반영된다. */
 
-const VERSION = "v42";
+const VERSION = "v43";
 const CACHE   = `calbee-${VERSION}`;
 
 const SHELL = [
