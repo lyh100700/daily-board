@@ -2309,7 +2309,7 @@ function bodyHTML(kind, item) {
      scripts/build-news.mjs 주석에 적어 두었다. */
   if (kind === "news") {
     return `
-      <span class="tagline">연합뉴스 · ${esc(item.at)}</span>
+      <span class="tagline">${esc(item.src || "연합뉴스")} · ${esc(item.at)}</span>
       <h3>${esc(item.q)}</h3>
       <a class="news-go" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">
         기사 읽기
