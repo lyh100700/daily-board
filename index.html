@@ -1435,6 +1435,218 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 .btn-primary { flex: 1; background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-sm); }
 .btn-ghost { padding: 0 var(--s5); background: var(--surface-2); border: 2px solid var(--line); color: var(--danger); }
 .btn-ghost[hidden] { display: none; }
+
+/* ─────────────────────────────────────────────
+   8. 기념일 편지 — 2026년 10월 6일 하루만 열린다
+
+   사진 한 장을 화면에 꽉 채우고, 그 한가운데로 흰 글씨가
+   한 자씩 써 내려간다. 딱 하루만 열린다.
+   ───────────────────────────────────────────── */
+dialog.love {
+  width: 100%;  max-width: 100%;
+  height: 100%; max-height: 100%;
+  margin: 0; padding: 0; border: none;
+  background: #0c0803; color: #fff;
+  overflow: hidden;
+}
+dialog.love::backdrop { background: #0c0803; }
+/* 달력에서 사진으로 한 번에 갈아타면 갑작스럽다. 천천히 밝아지게 한다 */
+dialog.love[open] { animation: loveIn .7s ease both; }
+@keyframes loveIn { from { opacity: 0; } }
+
+.love-in { position: relative; width: 100%; height: 100%; }
+
+/* 사진은 화면을 채우되 비율은 그대로 둔다.
+   아주 느리게 줌아웃시키면 멈춰 있는 사진에도 숨이 생긴다.
+
+   object-position 은 넓은 화면에서만 뜻이 있다. 폰처럼 세로로 긴
+   화면에서는 사진이 통째로 들어가 잘릴 데가 없고, 가로로 넓은
+   화면에서는 위아래가 잘리는데 그때 두 사람이 걷는 아래쪽을 남긴다 */
+.love-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center 66%;
+  animation: loveZoom 28s ease-out both;
+}
+@keyframes loveZoom { from { transform: scale(1.08); } to { transform: scale(1); } }
+
+/* 사진이 밝은 가을 숲이라 흰 글씨를 그냥 얹으면 잎사귀에 묻힌다.
+   위에서부터 고르게 덮되, 두 사람이 통나무를 건너는 아래쪽(82% 언저리)은
+   가장 옅게 두어 실루엣이 살아 있게 했다.
+   radial 은 시선을 가운데로 모으는 비네트다 */
+.love-in::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(125% 78% at 50% 42%,
+      rgba(0,0,0,0) 34%, rgba(10,6,2,.42) 100%),
+    linear-gradient(180deg,
+      rgba(14,9,3,.56)  0%,
+      rgba(14,9,3,.72) 18%,
+      rgba(14,9,3,.76) 50%,
+      rgba(14,9,3,.68) 74%,
+      rgba(14,9,3,.40) 88%,
+      rgba(14,9,3,.52) 100%);
+}
+
+/* 떨어지는 낙엽. 어두운 덮개 위, 편지 아래에 깔린다 —
+   덮개 밑에 두면 낙엽까지 같이 어두워져 보이지 않는다 */
+.love-leaves {
+  position: absolute; inset: 0; z-index: 1;
+  /* canvas 는 img 와 같은 '고유 크기를 가진 요소'라 inset:0 만으로는
+     늘어나지 않는다. 폭과 높이를 직접 주지 않으면 기본값 300x150 으로
+     왼쪽 위 구석에만 그려진다 */
+  width: 100%; height: 100%;
+  pointer-events: none;
+  animation: loveIn 2.4s .3s ease both;
+}
+
+.love-body {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex;
+  padding: calc(var(--s8) + env(safe-area-inset-top)) var(--s4)
+           calc(var(--s8) + 5vh + env(safe-area-inset-bottom));
+  /* 화면이 아주 낮은 기기에서 편지 끝줄이 잘려 나가지 않게 */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 편지 한 장.
+   가운데에 놓는 데 justify-content:center 대신 margin:auto 를 쓴다.
+   전자는 내용이 화면보다 길어지면 위쪽이 잘려 나가 굴릴 수조차 없다 */
+.love-card {
+  margin: auto;
+  width: min(30rem, 100%);
+  display: flex; flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* 닫기 — 편지를 가리지 않게 흐리게 두었다가 다 쓰이면 또렷해진다 */
+.love-x {
+  position: absolute; z-index: 3;
+  top:   calc(var(--s4) + env(safe-area-inset-top));
+  right: var(--s4);
+  width: 38px; height: 38px;
+  display: grid; place-items: center;
+  border-radius: var(--r-full);
+  color: #fff;
+  background: rgba(0,0,0,.34);
+  opacity: .38;
+  transition: opacity .4s ease, background .15s ease;
+}
+.love-x svg { width: 17px; height: 17px; }
+dialog.love.done .love-x { opacity: .9; }
+
+/* 날짜 한 줄과 그 아래 짧은 선 — 편지보다 먼저, 조용히 떠오른다 */
+.love-date {
+  font-size: 11px; font-weight: 800;
+  letter-spacing: .22em;
+  color: rgba(255,255,255,.72);
+  text-shadow: 0 1px 8px rgba(0,0,0,.7);
+  animation: loveUp 1s .4s ease both;
+}
+/* to 를 반드시 적는다. from 만 두면 끝값을 요소의 현재 값에서 가져오는데,
+   .love-sign 은 평소 opacity:0 이라 0 에서 0 으로 움직이게 된다 —
+   즉 서명이 영영 나타나지 않는다 */
+@keyframes loveUp {
+  from { opacity: 0; transform: translateY(9px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.love-rule {
+  width: 34px; height: 1px;
+  margin: var(--s4) 0 var(--s6);
+  background: rgba(255,255,255,.42);
+  animation: loveRule 1.1s .75s cubic-bezier(.2,.75,.3,1) both;
+}
+@keyframes loveRule { from { width: 0; opacity: 0; } }
+
+/* 편지 본문 */
+.love-text {
+  width: 100%;
+  font-size: clamp(14px, 4.1vw, 19px);
+  line-height: 1.85;
+  font-weight: 500;
+  letter-spacing: -.005em;
+  word-break: keep-all;          /* 한글이 단어 가운데서 끊기지 않게 */
+  color: #fff;
+  /* 사진 위의 흰 글씨는 그림자가 없으면 밝은 잎사귀에 묻힌다 */
+  text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 2px 20px rgba(0,0,0,.55);
+}
+
+/* 한 줄 —
+   완성된 줄이 차지할 자리를 '유령 글씨'(.gh)로 미리 잡아 두고,
+   그 위에 지금까지 쓰인 만큼(.on)을 겹쳐 보여 준다.
+
+   이 장치가 없으면, 가운데 정렬된 줄이 한 글자 늘어날 때마다
+   좌우로 흔들려서 읽기가 어지럽다. 자리를 먼저 잡아 두면
+   글씨는 왼쪽에서 오른쪽으로 차분히 채워진다 */
+.ln { display: block; }
+.ln > span { position: relative; display: inline-block; text-align: left; }
+.ln .gh { visibility: hidden; font-style: normal; }
+.ln .on { position: absolute; inset: 0; font-style: normal; }
+.ln-gap { height: .8em; }
+
+/* 지금 쓰이는 자리를 알려 주는 깜빡이는 막대 */
+.love-caret {
+  display: inline-block;
+  width: 2px; height: 1em;
+  vertical-align: -.14em;
+  margin-left: 1px;
+  background: rgba(255,255,255,.9);
+  animation: loveBlink 1s steps(2, start) infinite;
+}
+@keyframes loveBlink { 50% { opacity: 0; } }
+dialog.love.done .love-caret { display: none; }
+
+/* 보내는 사람 — 편지가 다 쓰이고 나서야 오른쪽 아래에 내려앉는다.
+   손편지에서 이름을 맨 마지막에 적는 것과 같은 순서다 */
+.love-sign {
+  align-self: flex-end;
+  display: flex; align-items: center; gap: var(--s2);
+  margin-top: var(--s6);
+  font-size: clamp(14px, 4.2vw, 19px);
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 2px 20px rgba(0,0,0,.55);
+  opacity: 0;
+}
+dialog.love.done .love-sign { animation: loveUp 1.2s .4s ease both; }
+
+.love-heart {
+  font-size: .9em;
+  color: #ffd9e2;
+  text-shadow: 0 2px 14px rgba(0,0,0,.6);
+  display: inline-block;
+}
+dialog.love.done .love-heart { animation: beat 2.6s 1.6s ease-in-out infinite; }
+@keyframes beat { 0%,100% { transform: scale(1); } 14% { transform: scale(1.16); } 28% { transform: scale(1); } 42% { transform: scale(1.1); } }
+
+/* 글씨가 흐르는 동안 "톡 누르면 바로 다 보여요" 안내 */
+.love-skip {
+  position: absolute; z-index: 3;
+  left: 0; right: 0;
+  bottom: calc(var(--s5) + env(safe-area-inset-bottom));
+  text-align: center;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .08em;
+  color: rgba(255,255,255,.52);
+  text-shadow: 0 1px 6px rgba(0,0,0,.75);
+  animation: loveUp .8s 3s ease both;
+  pointer-events: none;
+}
+dialog.love.done .love-skip { display: none; }
+
+/* 손떨림 방지 설정을 켠 사람에게는 움직임을 걷어낸다 */
+@media (prefers-reduced-motion: reduce) {
+  .love-photo  { animation: none; }
+  .love-caret  { animation: none; }
+  .love-rule   { animation: none; }
+  dialog.love.done .love-heart { animation: none; }
+  dialog.love.done .love-sign  { animation: loveUp .01s both; }
+}
 </style>
 </head>
 <body>
@@ -1538,6 +1750,31 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       일정 추가
     </button>
+  </div>
+</dialog>
+
+<!-- 2026년 10월 6일, 그날 하루만 열리는 편지 -->
+<dialog class="love" id="loveSheet">
+  <div class="love-in">
+    <!-- src 는 그날에만 넣는다. 미리 달아 두면 364일 동안 쓸 일 없는 사진을
+         앱을 열 때마다 내려받게 된다. -->
+    <img class="love-photo" id="lovePhoto" alt="함께 걷던 가을 숲" decoding="async">
+    <canvas class="love-leaves" id="loveLeaves" aria-hidden="true"></canvas>
+
+    <button type="button" class="love-x" id="loveClose" aria-label="닫기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+
+    <div class="love-body">
+      <div class="love-card">
+        <div class="love-date">2026. 10. 06 &nbsp;·&nbsp; 결혼 19주년</div>
+        <div class="love-rule"></div>
+        <div class="love-text" id="loveText"></div>
+        <div class="love-sign"><span class="love-heart">♡</span>양호가</div>
+      </div>
+    </div>
+
+    <div class="love-skip">화면을 누르면 편지가 한 번에 펼쳐져요</div>
   </div>
 </dialog>
 
@@ -1941,6 +2178,9 @@ function openDay(date) {
   renderMonth();
   renderDaySheet();
   if (!$("daySheet").open) $("daySheet").showModal();
+
+  /* 그날이면 일정 팝업 위로 편지가 한 장 더 올라온다 */
+  if (date === LOVE_DAY) openLove();
 }
 
 /* ─────────────────────────────────────────────
@@ -2049,6 +2289,364 @@ $("grid").onclick = ev => {
 };
 
 $("dayClose").onclick = () => $("daySheet").close();
+
+/* ─────────────────────────────────────────────
+   기념일 편지 — 2026년 10월 6일
+
+   그날 날짜를 누르면 사진 한 장이 화면을 채우고, 그 위로
+   편지가 한 글자씩 써 내려간다. 딱 하루만 열린다.
+
+   사진은 그날이 되어야 내려받는다. index.html 의 <img> 에 주소를
+   미리 박아 두면 아무 상관 없는 날에도 앱을 열 때마다 받아 오는데,
+   0.7MB 짜리를 364일 동안 그럴 이유가 없다.
+   ───────────────────────────────────────────── */
+const LOVE_DAY   = "2026-10-06";
+const LOVE_SRC   = "assets/anniversary.jpg";
+const LOVE_SPEED = 62;                    /* 한 글자에 몇 밀리초 */
+
+/* 줄바꿈은 원고 그대로가 아니라 폰 화면 폭에 맞춰 다시 끊었다.
+   원고의 긴 줄을 그대로 두면 화면에서 제멋대로 두 줄로 접혀
+   가운데 정렬이 들쭉날쭉해진다. 낱말은 하나도 바꾸지 않았고,
+   숨을 쉬는 자리에서만 끊었다. */
+const LOVE_TEXT =
+`혜원에게
+
+벌써 우리가 결혼한 지 19주년이라니
+시간 정말 빠르다.
+
+지난 시간을 돌아보면
+늘 내 곁에서 든든한 버팀목이 되어준
+혜니가 있어서 참 고마워.
+
+함께한 모든 날이
+내 인생 최고의 선물이야^^
+
+변함없는 항상 곁에 있어준 혜니 덕분에
+지금의 우리가 이렇게
+행복할 수 있었던 것 같아.
+
+늘 내 편이 되어줘서 고마워.
+사랑해~♡`;
+
+let loveTimer = null;                     /* 돌고 있으면 아직 쓰는 중이라는 뜻 */
+let loveSlots = [];                       /* 줄마다 {글, 채워 넣을 자리} */
+
+/* 몇 번째로 연 편지인지 세는 번호.
+
+   사진을 기다리는 동안 편지를 건너뛰거나 팝업을 닫아 버리면,
+   뒤늦게 도착한 사진이 이미 끝난 편지를 처음부터 다시 쓰기 시작한다.
+   완성된 글 위에 또 써서 글자가 겹쳐 찍힌다.
+
+   그래서 열 때마다 번호를 하나 올리고, 늦게 깨어난 일거리는
+   자기 번호가 아니면 그냥 물러나게 한다. */
+let loveRun = 0;
+
+/* 편지를 줄 단위로 미리 깔아 둔다.
+
+   완성된 줄이 차지할 자리를 보이지 않는 '유령 글씨'로 먼저 잡아 두는 것이
+   핵심이다. 가운데 정렬된 글은 한 글자 늘어날 때마다 좌우로 밀리는데,
+   자리를 미리 잡아 두면 글씨만 왼쪽에서 오른쪽으로 차분히 채워진다. */
+function loveBuild() {
+  const box = $("loveText");
+  box.textContent = "";
+  loveSlots = [];
+
+  for (const line of LOVE_TEXT.split("\n")) {
+    if (!line.trim()) {                   /* 빈 줄은 사이를 띄우는 몫만 한다 */
+      const gap = document.createElement("div");
+      gap.className = "ln-gap";
+      box.append(gap);
+      continue;
+    }
+    const row  = document.createElement("div");  row.className = "ln";
+    const wrap = document.createElement("span");
+    const gh   = document.createElement("i");    gh.className = "gh"; gh.textContent = line;
+    const on   = document.createElement("i");    on.className = "on";
+    wrap.append(gh, on);
+    row.append(wrap);
+    box.append(row);
+    loveSlots.push({ line, on, node: null });
+  }
+}
+
+/* 글씨를 끝까지 다 채우고 멈춘다. 화면을 누르면 여기로 온다 */
+function loveFinish() {
+  clearTimeout(loveTimer);
+  loveTimer = null;
+  loveRun++;                              /* 아직 안 깨어난 일거리를 무효로 만든다 */
+  for (const s of loveSlots) {
+    if (!s.node) { s.node = document.createTextNode(""); s.on.prepend(s.node); }
+    s.node.data = s.line;
+  }
+  $("loveSheet").classList.add("done");
+  leavesGust();
+}
+
+/* ─────────────────────────────────────────────
+   낙엽
+
+   사진이 늦가을 숲이라, 글씨만 떠 있으면 사진이 배경 그림으로만
+   남는다. 잎이 몇 장 떨어지면 그 순간이 멈춘 사진이 아니라
+   지금 일어나는 일처럼 보인다.
+
+   잎을 DOM 으로 만들면 20여 개가 매 프레임 레이아웃을 건드려
+   폰에서 버벅인다. 그래서 캔버스 한 장에 직접 그린다.
+   ───────────────────────────────────────────── */
+
+/* 사진에서 집어 온 색들이다. 사진에 없는 색을 쓰면 잎이
+   사진 위에 붙인 스티커처럼 뜬다.
+
+   단풍잎만 조금 더 붉게 잡았다. 다만 새빨갛게 하면 저 혼자 튀어서,
+   사진의 낮은 채도에 맞춰 눌러 둔 붉은색을 썼다 */
+const LEAF_COLORS  = ["#C98A33", "#A85A2B", "#D9A441", "#8E7A34", "#B4632A", "#C0762E"];
+const MAPLE_COLORS = ["#B5442A", "#C25A2C", "#A83A25", "#CE7433", "#9B3320", "#BC5127"];
+
+/* 단풍잎 윤곽 — 가운데 한 갈래, 양옆으로 두 갈래씩 모두 다섯 갈래다.
+   위(0도)에서 시작해 시계 방향으로 돌며 뾰족한 끝과 움푹한 골을
+   번갈아 찍는다. 끝은 직선으로 이어야 단풍 특유의 날카로움이 산다 */
+const MAPLE_PATH = [
+  [-142, .22], [-112, .76], [ -84, .47], [-56, .92], [-28, .51],
+  [   0, 1.0],
+  [  28, .51], [  56, .92], [  84, .47], [112, .76], [142, .22],
+];
+
+let leafRAF = null;     /* 돌고 있으면 낙엽이 날리는 중이라는 뜻 */
+let leaves  = [];
+let leafGust = 0;       /* 편지가 끝날 때 한 번 부는 바람 */
+
+/* 잎 한 장. 화면 아무 데서나 시작한다 —
+   전부 위에서 한꺼번에 내려오면 첫 순간이 부자연스럽다 */
+function makeLeaf(W, H, fromTop) {
+  const depth = Math.random();                    /* 0 멀리 · 1 가까이 */
+  /* 단풍잎만 날리면 조화 심은 것처럼 보인다. 실제 숲 바닥이 그렇듯
+     길쭉한 잎을 더 많이 섞는다 */
+  const maple = Math.random() < .42;
+  return {
+    kind: maple ? "maple" : "oval",
+    x: Math.random() * W,
+    y: fromTop ? -20 - Math.random() * H * .4 : Math.random() * H,
+    size: (maple ? 9 : 7) + depth * (maple ? 12 : 13),
+    vy: 16 + depth * 34,                          /* 가까운 잎이 빨리 진다 */
+    sway: 12 + Math.random() * 26,                /* 좌우로 흔들리는 폭 */
+    swayPhase: Math.random() * Math.PI * 2,
+    swaySpeed: .5 + Math.random() * .8,
+    rot: Math.random() * Math.PI * 2,
+    vrot: (Math.random() - .5) * 1.1,
+    flip: Math.random() * Math.PI * 2,
+    vflip: .8 + Math.random() * 1.5,              /* 팔랑이며 뒤집히는 속도 */
+    alpha: .46 + depth * .46,
+    color: maple
+      ? MAPLE_COLORS[(Math.random() * MAPLE_COLORS.length) | 0]
+      : LEAF_COLORS[(Math.random() * LEAF_COLORS.length) | 0],
+  };
+}
+
+/* 길쭉한 잎 — 참나무·느티나무 같은 흔한 잎 */
+function pathOval(ctx, w) {
+  const h = w * 1.6;
+  ctx.moveTo(0, -h / 2);
+  ctx.bezierCurveTo( w * .62, -h * .24,  w * .52, h * .28, 0, h / 2);
+  ctx.bezierCurveTo(-w * .52,  h * .28, -w * .62, -h * .24, 0, -h / 2);
+}
+
+function veinOval(ctx, w) {
+  const h = w * 1.6;
+  ctx.moveTo(0, -h * .46);
+  ctx.lineTo(0,  h * .46);
+}
+
+/* 단풍잎 */
+function pathMaple(ctx, w) {
+  const R = w * .62;
+  MAPLE_PATH.forEach(([deg, r], i) => {
+    const a = deg * Math.PI / 180;
+    const x =  Math.sin(a) * r * R;
+    const y = -Math.cos(a) * r * R;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.closePath();
+}
+
+function veinMaple(ctx, w) {
+  const R = w * .62, base = R * .2;
+  for (const deg of [-55, 0, 55]) {
+    const a = deg * Math.PI / 180;
+    ctx.moveTo(0, base);
+    ctx.lineTo(Math.sin(a) * R * .78, -Math.cos(a) * R * .78);
+  }
+  /* 잎자루 */
+  ctx.moveTo(0, base);
+  ctx.lineTo(0, base + R * .42);
+}
+
+function drawLeaf(ctx, L) {
+  const maple = L.kind === "maple";
+  ctx.save();
+  ctx.translate(L.x, L.y);
+  ctx.rotate(L.rot);
+  /* 가로만 눌렀다 폈다 하면 잎이 공중에서 뒤집히는 것처럼 보인다.
+     회전만으로는 종잇조각처럼 평평해 보인다 */
+  ctx.scale(Math.cos(L.flip), 1);
+
+  ctx.globalAlpha = L.alpha;
+  ctx.fillStyle = L.color;
+  ctx.beginPath();
+  (maple ? pathMaple : pathOval)(ctx, L.size);
+  ctx.fill();
+
+  /* 잎맥 — 이것 하나로 색칠한 도형이 잎이 된다 */
+  ctx.globalAlpha = L.alpha * (maple ? .34 : .4);
+  ctx.strokeStyle = "rgba(58,34,10,.9)";
+  ctx.lineWidth = Math.max(.5, L.size * (maple ? .045 : .06));
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  (maple ? veinMaple : veinOval)(ctx, L.size);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function leavesStop() {
+  if (leafRAF) cancelAnimationFrame(leafRAF);
+  leafRAF = null;
+}
+
+/* 편지를 다 쓰고 나면 바람이 한 번 분다. 끝맺음이 있어야 장면이 된다 */
+function leavesGust() { leafGust = 1; }
+
+function leavesStart() {
+  const cv  = $("loveLeaves");
+  const ctx = cv.getContext("2d");
+  leavesStop();
+  leafGust = 0;
+
+  let W = 0, H = 0;
+  const fit = () => {
+    /* 캔버스는 CSS 크기와 실제 점 개수가 따로 논다.
+       화면 배율을 곱해 주지 않으면 잎 가장자리가 뭉개진다 */
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  fit();
+
+  /* 화면이 넓을수록 잎이 많아야 밀도가 같아 보인다 */
+  const count = Math.max(16, Math.min(38, Math.round((W * H) / 10500)));
+  leaves = Array.from({ length: count }, () => makeLeaf(W, H, false));
+
+  /* 움직임을 줄여 달라고 설정한 사람에게는 한 장면만 그리고 멈춘다 */
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    ctx.clearRect(0, 0, W, H);
+    leaves.forEach(L => drawLeaf(ctx, L));
+    return;
+  }
+
+  let last = performance.now(), t = 0;
+  const frame = now => {
+    /* 앱을 내렸다 올리면 now 가 훌쩍 뛴다. 그대로 쓰면 잎이
+       화면 밖으로 순간이동한다 */
+    const dt = Math.min((now - last) / 1000, .05);
+    last = now; t += dt;
+
+    if (W !== cv.clientWidth || H !== cv.clientHeight) fit();
+    ctx.clearRect(0, 0, W, H);
+
+    /* 바람은 늘 같은 세기로 불지 않는다. 느린 파도처럼 오간다 */
+    const wind = 10 + Math.sin(t * .21) * 20 + Math.sin(t * .07) * 10
+               + leafGust * 90;
+    leafGust *= Math.pow(.35, dt);          /* 한 번 분 바람은 서서히 잦아든다 */
+
+    for (const L of leaves) {
+      L.swayPhase += L.swaySpeed * dt;
+      L.y   += L.vy * dt;
+      L.x   += (Math.sin(L.swayPhase) * L.sway + wind * (L.size / 17)) * dt;
+      L.rot += L.vrot * dt;
+      L.flip += L.vflip * dt;
+
+      if (L.y - 30 > H) Object.assign(L, makeLeaf(W, H, true));
+      if (L.x > W + 30) L.x = -30;
+      if (L.x < -30)    L.x = W + 30;
+
+      drawLeaf(ctx, L);
+    }
+    leafRAF = requestAnimationFrame(frame);
+  };
+  leafRAF = requestAnimationFrame(frame);
+}
+
+function openLove() {
+  const dlg = $("loveSheet");
+  const img = $("lovePhoto");
+  const run = ++loveRun;                  /* 이번에 연 편지의 번호 */
+
+  /* 두 번째로 열 때를 대비해 앞서 쓰던 것을 정리한다 */
+  clearTimeout(loveTimer);
+  loveTimer = null;
+  dlg.classList.remove("done");
+  loveBuild();
+
+  const caret = document.createElement("span");
+  caret.className = "love-caret";
+
+  if (!img.getAttribute("src")) img.setAttribute("src", LOVE_SRC);
+  if (!dlg.open) dlg.showModal();
+  leavesStart();               /* 캔버스 크기를 재야 하므로 띄운 뒤에 부른다 */
+
+  let li = 0, ci = 0;
+  const step = () => {
+    if (run !== loveRun) return;          /* 지난 편지가 남긴 일거리다 */
+    if (li >= loveSlots.length) { loveFinish(); return; }
+    const slot = loveSlots[li];
+
+    if (ci === 0) {                       /* 이 줄을 시작한다 — 커서를 옮겨 온다 */
+      slot.node = document.createTextNode("");
+      slot.on.append(slot.node, caret);
+    }
+    if (ci >= slot.line.length) {         /* 줄 끝 — 한 박 쉬고 다음 줄로 */
+      li++; ci = 0;
+      loveTimer = setTimeout(step, 440);
+      return;
+    }
+
+    const ch = slot.line[ci++];
+    slot.node.data += ch;
+
+    /* 문장이 끊기는 자리에서 잠깐 머문다. 손으로 쓰는 속도가 그렇다 */
+    const wait = ".,^~♡".includes(ch) ? LOVE_SPEED * 3 : LOVE_SPEED;
+    loveTimer = setTimeout(step, wait);
+  };
+
+  /* 사진이 먼저 눈에 들어오고 나서 글씨가 시작되게 한다.
+     사진이 아직 안 왔으면 올 때까지 기다린다 — 빈 화면에 글씨만
+     떠 있다가 뒤늦게 사진이 깔리면 어수선하다 */
+  const start = () => { if (run === loveRun) loveTimer = setTimeout(step, 1200); };
+  if (img.complete) start();
+  else {
+    img.addEventListener("load",  start, { once: true });
+    img.addEventListener("error", start, { once: true });
+  }
+}
+
+/* 화면 아무 데나 누르면 남은 글씨가 한 번에 펼쳐진다.
+   다 쓰인 뒤에는 아무 일도 없다 — 잘못 눌러 닫히면 아깝다 */
+$("loveSheet").onclick = ev => {
+  if (ev.target.closest("#loveClose")) return;
+  if (loveTimer) loveFinish();
+};
+$("loveClose").onclick = () => $("loveSheet").close();
+
+/* 닫을 때(뒤로 가기·ESC 포함) 돌던 타이머를 반드시 멈춘다.
+   놔두면 닫힌 팝업에 글씨를 계속 쓰고 있게 된다 */
+$("loveSheet").addEventListener("close", () => {
+  clearTimeout(loveTimer);
+  loveTimer = null;
+  loveRun++;                              /* 닫은 뒤에 깨어나 글을 쓰는 일이 없게 */
+  leavesStop();
+});
+
+/* 그날이면 사진을 미리 받아 둔다. 눌렀을 때 곧바로 보이게 */
+if (TODAY === LOVE_DAY) $("lovePhoto").setAttribute("src", LOVE_SRC);
 
 /* ─────────────────────────────────────────────
    달력 좌우로 밀어 달 넘기기
