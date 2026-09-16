@@ -2179,8 +2179,12 @@ function openDay(date) {
   renderDaySheet();
   if (!$("daySheet").open) $("daySheet").showModal();
 
-  /* 그날이면 일정 팝업 위로 편지가 한 장 더 올라온다 */
-  if (date === LOVE_DAY) openLove();
+  /* 그날이 되어야 일정 팝업 위로 편지가 한 장 더 올라온다.
+
+     누른 날짜만 보면 안 된다. 그러면 달력을 미리 넘겨 10월 6일을
+     누르는 것만으로 오늘도 편지가 열려 버린다. 오늘이 그날인지를
+     함께 확인해야 그날 하루만 열린다. */
+  if (date === LOVE_DAY && TODAY === LOVE_DAY) openLove();
 }
 
 /* ─────────────────────────────────────────────
