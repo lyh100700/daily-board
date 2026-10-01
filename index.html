@@ -362,9 +362,10 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 .mini.span-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -3px; }
 .mini.span-mid   { border-radius: 0; margin: 0 -3px; }
 .mini.span-end   { border-top-left-radius: 0;  border-bottom-left-radius: 0;  margin-left: -3px; }
-/* 늘어난 만큼 글씨가 모서리에 붙지 않게 안쪽 여백을 돌려준다 */
-.mini.span-start { padding-right: 7px; }
-.mini.span-mid, .mini.span-end { padding-left: 7px; }
+
+/* 제목은 띠 한가운데 칸에만 적히므로 글씨도 가운데로 맞춘다.
+   왼쪽에 붙여 두면 띠 가운데에 놓인 글자가 혼자 왼쪽으로 쏠려 보인다 */
+.mini.span-start, .mini.span-mid, .mini.span-end { text-align: center; }
 
 /* 공휴일은 일정과 구분되게 빨간 계열로 */
 .mini.holiday {
@@ -2338,10 +2339,23 @@ function renderMonth() {
                   : k === 1 ? " span-start"
                   : k === n ? " span-end"
                   :           " span-mid";
-        /* 제목은 시작한 날과 각 주의 첫 칸에만 적는다. 걸친 칸마다
-           되풀이하면 좁은 칸이 같은 글자로 가득 차고, 어디서 시작한
-           일정인지 오히려 알아보기 어렵다 */
-        const label = (n === 1 || k === 1 || dow === 0) ? esc(e.title) : "";
+        /* 제목은 그 주에 보이는 띠의 한가운데 칸에 한 번만 적는다.
+
+           칸마다 되풀이하면 좁은 칸이 같은 글자로 가득 찬다. 그렇다고
+           첫 칸에만 적으면 긴 띠의 왼쪽 끝에 글자가 매달린 꼴이 된다.
+           칸은 서로 독립이라 글씨가 칸을 넘어 흐르지 못하므로, 한가운데
+           칸에 놓는 것이 띠 위에 가운데로 얹는 가장 가까운 방법이다.
+
+           띠는 주가 바뀌면 줄이 끊기니, 전체가 아니라 '이 주에 보이는
+           만큼'을 기준으로 가운데를 찾는다. */
+        let label = "";
+        if (n === 1) {
+          label = esc(e.title);
+        } else {
+          const back = Math.min(dow, k - 1);          // 이 주에서 왼쪽으로 이어진 칸 수
+          const fwd  = Math.min(6 - dow, n - k);      // 오른쪽으로 이어질 칸 수
+          if (back === Math.floor((back + fwd) / 2)) label = esc(e.title);
+        }
         return `<span class="mini${pos}${doneOn(e, date) ? " done" : ""}" style="--c:${catOf(e.cat).color}">${label}</span>`;
       }).join("") +
       (rest > 0 ? `<span class="more">+${rest}</span>` : "");
