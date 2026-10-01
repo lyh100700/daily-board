@@ -135,6 +135,21 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
 
 .title { display: flex; align-items: center; gap: var(--s3); }
 .title-text { display: flex; align-items: baseline; gap: var(--s2); }
+/* 눌리는 것임을 알리는 작은 화살표. 글씨보다 연해서 먼저 읽히지는 않는다 */
+.title-caret {
+  width: 15px; height: 15px;
+  align-self: center;
+  color: var(--muted);
+  transition: transform .18s ease;
+}
+.title-text:hover .title-caret { transform: translateY(1px); }
+
+/* 화면에는 안 보이지만 읽어 주는 기계에는 남는 제목 */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
 
 /* 앱의 얼굴 — 홈화면 아이콘과 같은 캐릭터라 어느 앱인지 바로 읽힌다 */
 .brand {
@@ -338,6 +353,18 @@ button { cursor: pointer; border: none; background: none; padding: 0; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mini.done { opacity: .42; text-decoration: line-through; }
+
+/* 여러 날 일정은 걸친 칸마다 따로 그려진다.
+
+   이어지는 쪽 모서리를 펴고, 칸의 좌우 여백(3px)만큼 밖으로 늘린다.
+   칸과 칸 사이에는 간격이 없으므로 이 둘을 같이 해야 막대가 정확히
+   맞닿아 한 줄로 이어져 보인다. 모서리만 펴면 3px 씩 끊긴 채로 남는다. */
+.mini.span-start { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: -3px; }
+.mini.span-mid   { border-radius: 0; margin: 0 -3px; }
+.mini.span-end   { border-top-left-radius: 0;  border-bottom-left-radius: 0;  margin-left: -3px; }
+/* 늘어난 만큼 글씨가 모서리에 붙지 않게 안쪽 여백을 돌려준다 */
+.mini.span-start { padding-right: 7px; }
+.mini.span-mid, .mini.span-end { padding-left: 7px; }
 
 /* 공휴일은 일정과 구분되게 빨간 계열로 */
 .mini.holiday {
@@ -1409,6 +1436,104 @@ textarea.input { height: auto; padding: var(--s3) var(--s4); resize: vertical; m
 /* 체크박스 두 개를 한 줄에 놓는다. 아주 좁은 폰에서는 자연스럽게 두 줄이 된다 */
 .toggles { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); }
 
+/* 칸 이름과 '여러 날' 스위치를 한 줄에 둔다. 스위치를 아래쪽
+   토글 묶음에 넣으면 날짜 칸에서 멀어져 무엇을 켜는 것인지 흐려진다 */
+.label-row { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.toggle-sm { font-size: 13px; }
+.toggle-sm input { width: 16px; height: 16px; }
+
+/* 시작일과 끝일은 한 줄에 나란히. 세로로 쌓으면 둘이 한 쌍이라는 게
+   덜 보이고, 시트가 길어져 저장 버튼이 화면 밖으로 밀린다 */
+.daterange { display: flex; align-items: center; gap: var(--s2); }
+/* flex 칸은 기본값이 '내용보다 작아지지 않기'다. 날짜 입력칸은
+   내용 폭이 제법 넓어서, 이걸 풀어 주지 않으면 둘이 한 줄에 안 들어간다 */
+.daterange .input { min-width: 0; }
+.daterange-sep { flex: none; color: var(--muted); font-weight: 800; }
+.daterange.one .daterange-sep,
+.daterange.one #fEnd { display: none; }
+
+.hint { margin: 0; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+
+/* ── 그 달 일정 목록 ──
+   날짜 머리와 그 아래 일정들이 번갈아 나오는 한 줄짜리 목록이다.
+   한 달치가 길어질 수 있어 이 안쪽만 굴러가게 두었다 */
+.mlist {
+  display: flex; flex-direction: column; gap: var(--s1);
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 굴릴 때 글씨가 시트 가장자리에 딱 붙어 잘려 보이지 않게 */
+  padding-right: var(--s1);
+  margin-right: calc(var(--s1) * -1);
+}
+
+.mday {
+  display: flex; align-items: baseline; gap: var(--s2);
+  width: 100%;
+  padding: var(--s3) var(--s1) var(--s1);
+  text-align: left;
+}
+.mday + .mrow { margin-top: 0; }
+.mday-num { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+.mday-wd  { font-size: 12px; font-weight: 700; color: var(--muted); }
+.mday.sun .mday-num, .mday.sun .mday-wd,
+.mday.holiday .mday-num, .mday.holiday .mday-wd { color: var(--sun); }
+.mday-hol { font-size: 11.5px; font-weight: 700; color: var(--sun); }
+/* 오늘은 숫자에 동그라미를 둘러 어디쯤인지 한눈에 잡히게 한다 */
+.mday.today .mday-num {
+  display: inline-grid; place-items: center;
+  min-width: 22px; height: 22px; padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--accent); color: #fff;
+}
+
+.mrow {
+  display: flex; align-items: center; gap: var(--s3);
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--c);
+  background: var(--surface-2);
+  text-align: left;
+  transition: background .15s ease;
+}
+.mrow:hover { background: color-mix(in oklab, var(--c) 12%, var(--surface-2)); }
+.mrow.done .mrow-title { opacity: .45; text-decoration: line-through; }
+
+.mrow-time {
+  flex: none; min-width: 54px;
+  font-size: 11.5px; font-weight: 800;
+  letter-spacing: .02em;
+  color: var(--c);
+  font-variant-numeric: tabular-nums;
+}
+.mrow-title {
+  flex: 1; min-width: 0;
+  font-size: 14px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mrow-badge {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c) 22%, transparent);
+  color: var(--ink-2);
+  font-size: 10.5px; font-weight: 800;
+}
+
+/* 일정 카드에 붙는 '3일 중 2일째' 딱지 */
+.ev-span {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: color-mix(in oklab, var(--c) 22%, transparent);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  vertical-align: 1px;
+}
+
 .toggle {
   display: flex; align-items: center; gap: var(--s2);
   font-size: 14px; color: var(--ink-2); cursor: pointer;
@@ -1662,10 +1787,18 @@ dialog.love.done .love-skip { display: none; }
   <header class="head">
     <div class="title">
       <img class="brand" id="brand" src="icons/brand-144.png" alt="" width="38" height="38">
-      <div class="title-text">
+      <!-- 달 이름 자체가 버튼이다. 옆에 따로 아이콘을 두면 좁은 머리글이
+           더 좁아지고, 무엇을 눌러야 하는지도 한 번 더 생각하게 된다.
+           h1 을 span 으로 바꾼 것은 button 안에 제목을 넣을 수 없어서다 —
+           화면에 안 보이는 제목을 아래에 따로 뒀다. -->
+      <button type="button" class="title-text" id="monthBtn"
+              aria-label="이 달 일정 모두 보기">
         <span class="year" id="year">2026년</span>
-        <h1 class="month" id="monthLabel">8월</h1>
-      </div>
+        <span class="month" id="monthLabel">8월</span>
+        <svg class="title-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <h1 class="sr-only">캘비 달력</h1>
     </div>
 
     <div class="nav">
@@ -1778,6 +1911,22 @@ dialog.love.done .love-skip { display: none; }
   </div>
 </dialog>
 
+<!-- 달 이름을 누르면 뜨는 그 달 일정 목록 -->
+<dialog class="sheet" id="monthSheet">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <div class="day-title">
+        <h2 id="monthSheetTitle">10월</h2>
+        <span class="count" id="monthCount"></span>
+      </div>
+      <button type="button" class="icon-btn" id="monthClose" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="mlist" id="mlist"></div>
+  </div>
+</dialog>
+
 <!-- 헤더의 날씨 버튼을 누르면 뜨는 주간 예보 -->
 <dialog class="sheet" id="wxSheet">
   <div class="sheet-in">
@@ -1830,8 +1979,19 @@ dialog.love.done .love-skip { display: none; }
     </div>
 
     <div class="field">
-      <label class="label" for="fDate">날짜</label>
-      <input class="input" id="fDate" type="date" required>
+      <div class="label-row">
+        <label class="label" for="fDate">날짜</label>
+        <label class="toggle toggle-sm">
+          <input type="checkbox" id="fSpan">
+          여러 날
+        </label>
+      </div>
+      <div class="daterange one" id="dateRange">
+        <input class="input" id="fDate" type="date" required>
+        <span class="daterange-sep" aria-hidden="true">–</span>
+        <input class="input" id="fEnd" type="date" aria-label="끝나는 날">
+      </div>
+      <p class="hint" id="spanHint" hidden></p>
     </div>
 
     <div class="field">
@@ -1940,6 +2100,24 @@ const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-$
 
 const TODAY = ymd(new Date());
 
+/* 날짜 문자열끼리 더하고 빼는 자리.
+
+   Date 로 바꿔 셈한 뒤 다시 문자열로 돌려준다. 문자열인 채로
+   '하루 뒤'를 구하려 들면 월말과 윤년에서 반드시 틀린다. */
+const dateAdd = (date, n) => {
+  const [y, m, d] = date.split("-").map(Number);
+  return ymd(new Date(y, m - 1, d + n));
+};
+
+/* 두 날짜가 며칠 떨어져 있는지 (b - a) */
+const dayDiff = (a, b) => {
+  const [ay, am, ad] = a.split("-").map(Number);
+  const [by, bm, bd] = b.split("-").map(Number);
+  return Math.round((new Date(by, bm - 1, bd) - new Date(ay, am - 1, ad)) / 86400000);
+};
+
+const isLeap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+
 function seed() {
   const base = new Date();
   const day = n => { const d = new Date(base); d.setDate(d.getDate()+n); return ymd(d); };
@@ -1966,38 +2144,75 @@ const $ = id => document.getElementById(id);
 const WD = ["일","월","화","수","목","금","토"];
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-/* 매년 반복 일정이 이 날에 걸리는지.
+/* 며칠짜리 일정인지. 끝나는 날이 없으면 하루.
 
-   저장은 처음 넣은 날짜 하나로만 해 둔다. 해마다 복사본을 만들면
-   몇 해 뒤에 수백 개가 쌓이고, 하나를 고칠 때 나머지가 안 따라온다. */
-function yearlyOn(e, date) {
-  if (!e.yearly) return false;
+   여러 날 일정도 저장은 한 덩어리로 한다. 걸친 날마다 복사본을
+   만들면 제목 하나 고치는 데 며칠치를 다 손봐야 한다. */
+const spanLen = e => (e.end && e.end > e.date) ? dayDiff(e.date, e.end) + 1 : 1;
+
+/* 매년 반복이 그 해 며칠에 다시 시작하는지.
+
+   2월 29일은 4년에 한 번만 있다. 그대로 두면 생일이 세 해씩
+   사라지므로 윤년이 아닌 해에는 28일로 당겨 준다. */
+function anniversaryStart(e, year) {
   const md = e.date.slice(5);
-  if (md === date.slice(5)) return true;
+  if (md === "02-29" && !isLeap(year)) return `${year}-02-28`;
+  return `${year}-${md}`;
+}
 
-  /* 2월 29일은 4년에 한 번만 있다. 그대로 두면 생일이 세 해씩 사라지므로
-     윤년이 아닌 해에는 28일에 보여 준다. */
-  if (md === "02-29" && date.slice(5) === "02-28") {
-    const y = +date.slice(0, 4);
-    return !((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0);
+/* 이 날이 그 일정의 몇 일째인지. 걸리지 않으면 0.
+
+   하루짜리는 1, 사흘짜리의 가운뎃날은 2 다. 화면에 '3일 중 2일째'를
+   띄우려면 이 숫자가 있어야 해서, 걸리는지만 묻지 않고 몇 번째인지까지
+   돌려준다. */
+function dayOfEvent(e, date) {
+  const len = spanLen(e);
+
+  if (!e.yearly) {
+    const i = dayDiff(e.date, date);
+    return (i >= 0 && i < len) ? i + 1 : 0;
   }
-  return false;
+
+  /* 매년 반복은 해마다 같은 월·일에서 다시 시작한다.
+     연말에 걸친 일정(12/30~1/2)은 지난해에 시작한 것이 올해로
+     넘어오므로, 올해 것과 지난해 것을 모두 본다. */
+  const y = +date.slice(0, 4);
+  for (const yy of [y, y - 1]) {
+    const i = dayDiff(anniversaryStart(e, yy), date);
+    if (i >= 0 && i < len) return i + 1;
+  }
+  return 0;
 }
 
 const eventsOn = date => events
-  .filter(e => e.date === date || yearlyOn(e, date))
+  .filter(e => dayOfEvent(e, date) > 0)
   .sort((a,b) => (a.time || "").localeCompare(b.time || ""));
 
 /* 완료 표시.
 
    매년 반복은 해마다 따로 센다. 올해 생신을 챙겼다고 내년 것까지
    완료로 남아 있으면 안 되기 때문이다. */
+/* 매년 반복이 이 날에 걸릴 때, 그게 몇 년도 것인지.
+
+   12/30~1/2 처럼 해를 넘기는 일정은 1월에 보고 있어도 지난해에
+   시작한 것이다. 날짜의 앞 네 자리를 그냥 쓰면 같은 일정이
+   섣달그믐과 설날에 따로 세어진다. */
+function occurrenceYear(e, date) {
+  const y = +date.slice(0, 4);
+  const len = spanLen(e);
+  for (const yy of [y, y - 1]) {
+    const i = dayDiff(anniversaryStart(e, yy), date);
+    if (i >= 0 && i < len) return String(yy);
+  }
+  return date.slice(0, 4);
+}
+
 const doneOn = (e, date) =>
-  e.yearly ? (e.doneYears || []).includes(date.slice(0, 4)) : !!e.done;
+  e.yearly ? (e.doneYears || []).includes(occurrenceYear(e, date)) : !!e.done;
 
 function toggleDone(e, date) {
   if (!e.yearly) { e.done = !e.done; return; }
-  const y = date.slice(0, 4);
+  const y = occurrenceYear(e, date);
   const had = e.doneYears || [];
   e.doneYears = had.includes(y) ? had.filter(v => v !== y) : [...had, y];
 }
@@ -2089,16 +2304,46 @@ function renderMonth() {
     const out  = d.getMonth() !== view.m - 1;           // 지난달·다음달
     const list = eventsOn(date);
 
-    /* 칸이 좁다. 공휴일이 있으면 그것부터 보여주고 남는 자리에 일정을 넣는다 */
+    /* 칸이 좁다. 막대는 두 줄까지만 들어가고 나머지는 '+N' 으로 접는다.
+       공휴일이 있으면 한 줄은 그 몫이다 */
     const holiday = holidayOn(date);
-    const room    = holiday ? 1 : 2;
-    const rest    = list.length - room;
+    const dow     = i % 7;
+
+    const spans   = list.filter(e => spanLen(e) > 1);
+    const singles = list.filter(e => spanLen(e) === 1);
+
+    const SLOTS  = 2;
+    const chosen = [...spans, ...singles].slice(0, holiday ? SLOTS - 1 : SLOTS);
+    const rest   = list.length - chosen.length;
+
+    /* 줄 순서는 여러 날 막대 → 공휴일 → 하루짜리 일정.
+
+       공휴일을 맨 위에 두면, 같은 일정의 막대가 공휴일이 있는 날에는
+       둘째 줄, 없는 날에는 첫 줄에 놓여 이어진 띠가 계단처럼 어긋난다.
+       하필 연휴에 걸친 여행일수록 그래서, 보여 주려던 '이어짐'이 깨진다. */
+    const order = [
+      ...chosen.filter(e => spanLen(e) > 1).map(e => ({ ev: e })),
+      ...(holiday ? [{ hol: holiday }] : []),
+      ...chosen.filter(e => spanLen(e) === 1).map(e => ({ ev: e })),
+    ];
 
     const minis =
-      (holiday ? `<span class="mini holiday">${esc(holiday)}</span>` : "") +
-      list.slice(0, room)
-        .map(e => `<span class="mini${doneOn(e, date) ? " done" : ""}" style="--c:${catOf(e.cat).color}">${esc(e.title)}</span>`)
-        .join("") +
+      order.map(o => {
+        if (o.hol) return `<span class="mini holiday">${esc(o.hol)}</span>`;
+
+        const e = o.ev;
+        const n = spanLen(e);
+        const k = dayOfEvent(e, date);
+        const pos = n === 1 ? ""
+                  : k === 1 ? " span-start"
+                  : k === n ? " span-end"
+                  :           " span-mid";
+        /* 제목은 시작한 날과 각 주의 첫 칸에만 적는다. 걸친 칸마다
+           되풀이하면 좁은 칸이 같은 글자로 가득 차고, 어디서 시작한
+           일정인지 오히려 알아보기 어렵다 */
+        const label = (n === 1 || k === 1 || dow === 0) ? esc(e.title) : "";
+        return `<span class="mini${pos}${doneOn(e, date) ? " done" : ""}" style="--c:${catOf(e.cat).color}">${label}</span>`;
+      }).join("") +
       (rest > 0 ? `<span class="more">+${rest}</span>` : "");
 
     html += `<button class="cell${out ? " out" : ""}${date === TODAY ? " today" : ""}${date === picked ? " picked" : ""}${holiday ? " holiday" : ""}"
@@ -2144,7 +2389,8 @@ function renderDaySheet() {
         <span class="ev-face">${art(e.cat)}</span>
         <button class="ev-body" data-edit="${e.id}">
           <span class="ev-time">${e.time || "하루 종일"}${
-            e.yearly ? `<span class="ev-yearly">매년</span>` : ""}</span>
+            e.yearly ? `<span class="ev-yearly">매년</span>` : ""}${
+            spanLen(e) > 1 ? `<span class="ev-span">${spanLen(e)}일 중 ${dayOfEvent(e, picked)}일째</span>` : ""}</span>
           <div class="ev-title">${esc(e.title)}</div>
           ${e.note ? `<div class="ev-note">${esc(e.note)}</div>` : ""}
         </button>
@@ -2256,6 +2502,11 @@ function openSheet(id) {
   $("fNote").value     = e?.note  ?? "";
   $("fAllday").checked = e ? !e.time : false;
   $("fYearly").checked = e ? !!e.yearly : false;
+
+  const multi = !!(e && e.end && e.end > e.date);
+  $("fSpan").checked = multi;
+  $("fEnd").value    = multi ? e.end : ($("fDate").value);
+  paintSpan();
   $("timePick").classList.toggle("off", $("fAllday").checked);
   $("delBtn").hidden   = !e;
   pickedCat = e?.cat ?? "life";
@@ -2297,6 +2548,113 @@ $("grid").onclick = ev => {
 };
 
 $("dayClose").onclick = () => $("daySheet").close();
+
+/* ─────────────────────────────────────────────
+   그 달 일정 목록 — 달 이름을 누르면 열린다
+
+   달력 칸은 좁아서 하루에 두 개까지밖에 못 보여 준다. 나머지는
+   '+3' 으로 접히는데, 그 달에 무슨 일이 있었는지 훑어보려면
+   서른 칸을 하나씩 눌러 봐야 한다. 그래서 한 줄짜리 목록을 따로 둔다.
+   ───────────────────────────────────────────── */
+
+/* 그 달에 걸치는 일정을 날짜 순으로 모은다.
+
+   여러 날 일정은 걸친 날마다가 아니라 한 번만 싣는다. 목록에서까지
+   되풀이되면 그 달에 일정이 몇 개인지 셀 수 없게 된다.
+   지난달에 시작해 이달로 넘어온 것은 1일 자리에 놓는다. */
+function monthEvents(y, m) {
+  const first = `${y}-${String(m).padStart(2, "0")}-01`;
+  const last  = ymd(new Date(y, m, 0));            // 0일 = 전달의 마지막 날
+  const rows  = [];
+
+  for (const e of events) {
+    const len = spanLen(e);
+
+    /* 매년 반복은 해를 넘길 수 있다. 1월 목록에는 지난해 섣달에
+       시작한 것이 걸릴 수 있으므로 두 해를 다 본다 */
+    const starts = e.yearly
+      ? [anniversaryStart(e, y - 1), anniversaryStart(e, y)]
+      : [e.date];
+
+    for (const st of starts) {
+      const en = dateAdd(st, len - 1);
+      if (en < first || st > last) continue;        // 이 달과 겹치지 않는다
+      rows.push({ e, start: st, end: en, at: st < first ? first : st });
+    }
+  }
+
+  return rows.sort((a, b) =>
+    a.at.localeCompare(b.at) || (a.e.time || "").localeCompare(b.e.time || ""));
+}
+
+function renderMonthSheet() {
+  const rows = monthEvents(view.y, view.m);
+
+  $("monthSheetTitle").textContent = `${view.y}년 ${view.m}월`;
+  $("monthCount").textContent = rows.length ? `${rows.length}개` : "";
+
+  if (!rows.length) {
+    $("mlist").innerHTML = `
+      <div class="empty">${ART.life("#D8CDB4")}
+        <p>이 달에는 아직 일정이 없어요</p>
+      </div>`;
+    return;
+  }
+
+  let html = "", shown = "";
+  for (const r of rows) {
+    /* 날짜가 바뀔 때만 머리를 새로 찍는다 */
+    if (r.at !== shown) {
+      shown = r.at;
+      const [yy, mm, dd] = r.at.split("-").map(Number);
+      const w   = new Date(yy, mm - 1, dd).getDay();
+      const hol = holidayOn(r.at);
+      html += `<button class="mday${w === 0 ? " sun" : ""}${hol ? " holiday" : ""}${r.at === TODAY ? " today" : ""}"
+                       data-day="${r.at}">
+                 <span class="mday-num">${dd}</span>
+                 <span class="mday-wd">${WD[w]}</span>
+                 ${hol ? `<span class="mday-hol">${esc(hol)}</span>` : ""}
+               </button>`;
+    }
+
+    const e   = r.e;
+    const c   = catOf(e.cat);
+    const len = spanLen(e);
+    /* 지난달에서 넘어온 것은 '이어짐', 이 달에서 시작하는 것은 '3일간' */
+    const badge = len === 1 ? (e.yearly ? "매년" : "")
+                : r.start < r.at ? "이어짐"
+                : `${len}일간`;
+
+    html += `<button class="mrow${doneOn(e, r.at) ? " done" : ""}" style="--c:${c.color}"
+                     data-go="${r.at}">
+               <span class="mrow-time">${e.time || "종일"}</span>
+               <span class="mrow-title">${esc(e.title)}</span>
+               ${badge ? `<span class="mrow-badge">${badge}</span>` : ""}
+             </button>`;
+  }
+  $("mlist").innerHTML = html;
+}
+
+function openMonthSheet() {
+  renderMonthSheet();
+  if (!$("monthSheet").open) $("monthSheet").showModal();
+}
+
+$("monthBtn").onclick   = openMonthSheet;
+$("monthClose").onclick = () => $("monthSheet").close();
+
+/* 목록에서 무엇을 누르든 그 날로 데려간다.
+
+   여기서 바로 고치게 하지 않는 이유는, 완료 표시와 삭제가 이미
+   날짜 팝업에 있기 때문이다. 같은 일을 두 군데서 하게 만들면
+   어느 쪽이 진짜인지 헷갈린다. 목록은 길잡이 노릇만 한다. */
+$("mlist").onclick = ev => {
+  const hit = ev.target.closest("[data-day], [data-go]");
+  if (!hit) return;
+  const date = hit.dataset.day || hit.dataset.go;
+  $("monthSheet").close();
+  openDay(date);
+};
 
 /* ─────────────────────────────────────────────
    기념일 편지 — 2026년 10월 6일
@@ -2791,6 +3149,30 @@ $("fAllday").onchange = ev => {
   $("timePick").classList.toggle("off", ev.target.checked);
 };
 
+/* '여러 날' 스위치를 켜고 끌 때마다 끝나는 날 칸을 손봐 준다 */
+function paintSpan() {
+  const on = $("fSpan").checked;
+  $("dateRange").classList.toggle("one", !on);
+  $("fEnd").required = on;
+
+  if (on) {
+    /* 끝나는 날은 시작보다 앞설 수 없다. 달력 자체에서 막아 두면
+       고를 수 없는 날을 눌렀다가 저장할 때야 거절당하는 일이 없다 */
+    $("fEnd").min = $("fDate").value;
+    if (!$("fEnd").value || $("fEnd").value < $("fDate").value) {
+      $("fEnd").value = $("fDate").value;
+    }
+  }
+
+  const n = (on && $("fEnd").value) ? dayDiff($("fDate").value, $("fEnd").value) + 1 : 1;
+  $("spanHint").hidden = !on;
+  $("spanHint").textContent = n > 1 ? `${n}일 동안 이어져요` : "끝나는 날을 골라 주세요";
+}
+
+$("fSpan").onchange = paintSpan;
+$("fDate").onchange = paintSpan;
+$("fEnd").onchange  = paintSpan;
+
 $("delBtn").onclick = () => {
   events = events.filter(v => v.id !== editing);
   save();
@@ -2801,9 +3183,15 @@ $("delBtn").onclick = () => {
 $("form").onsubmit = ev => {
   ev.preventDefault();
 
+  const date   = $("fDate").value;
+  const endRaw = $("fSpan").checked ? $("fEnd").value : "";
+
   const data = {
     title:  $("fTitle").value.trim(),
-    date:   $("fDate").value,
+    date,
+    /* 끝나는 날이 시작보다 앞서면 하루짜리로 둔다. 입력칸에 min 을
+       걸어 두었지만 키보드로 직접 쳐 넣으면 뚫리는 브라우저가 있다 */
+    end:    (endRaw && endRaw > date) ? endRaw : "",
     time:   $("fAllday").checked ? "" : getTimeValue(),
     note:   $("fNote").value.trim(),
     cat:    pickedCat,
